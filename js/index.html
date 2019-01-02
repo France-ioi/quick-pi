@@ -1,0 +1,29 @@
+<html>
+<head>
+	<script src="quickpi.js"></script>
+</head>
+	<body>
+		<div>
+			Raspberry Pi IP Address:
+			<input type="text" id="rpiaddress" value="192.168.1.86">
+		</div>
+		<div>
+			<textarea rows="20" cols="50" id="pythoncode">
+while True:
+  turnLedOn()
+  time.sleep(1)
+  turnLedOff()
+  time.sleep(1)
+			</textarea> 
+		</div>
+
+		<div>
+			<button onclick="updateRPIAddress();executeProgram(document.getElementById('pythoncode').value);">Send program</button> 
+		</div>
+
+		<div>
+			<button onclick="updateRPIAddress();stopProgram();">Stop program</button>
+		</div>
+
+	</body>
+</html>
