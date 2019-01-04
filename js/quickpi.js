@@ -1,5 +1,6 @@
 var pythonLib = "";
 var raspiServer = "";
+var outputInterval = null;
 
 function updateRPIAddress() {
 	var ipaddress = document.getElementById('rpiaddress').value;
@@ -8,7 +9,6 @@ function updateRPIAddress() {
 }
 
 function fetchPythonLib(doAfter, param) {
-
 	fetch('quickpilib.py')
 	  .then(function(response) {
 		    return response.text();
@@ -33,8 +33,10 @@ function executeProgram(pythonProgram) {
 	var request = new XMLHttpRequest();
 	request.open('POST', url, true);
 	request.onreadystatechange = function() {
-		if (request.readyState == 4)
-			alert("It worked!");
+		if (request.readyState == 4) {
+			if (request.status == 423)
+				alert("Quick pi is locked by someone else");
+		}
 	};
 
 	request.send(fullProgram);
@@ -46,10 +48,57 @@ function stopProgram() {
         var request = new XMLHttpRequest();
         request.open('POST', url, true);
         request.onreadystatechange = function() {
-                if (request.readyState == 4)
-                        alert("It worked!");
+                if (request.readyState == 4) {
+                        if (request.status == 423)
+                                alert("Quick pi is locked by someone else");
+                }
         };
 
         request.send("");
 }
 
+function getProgramOutput(outputFunction) {
+	url = raspiServer + "/api/v1/readoutput";
+
+        fetch(url)
+          .then(function(response) {
+                    return response.text();
+          })
+          .then(function(text) {
+		outputFunction(text);
+          });
+}
+
+function startOutputPoll(textAreaId)
+{
+	if (outputInterval == null) {
+		var textArea = document.getElementById(textAreaId);
+
+		outputInterval = setInterval(function() { getProgramOutput(function(text) { textArea.value = text }) }, 1000)
+	}
+}
+
+function stopProgramOutput()
+{
+	if (outputInterval != null)
+	{
+		clearInterval(outputInterval);
+		outputInterval = null;
+	}
+}
+
+function releaseLock()
+{
+        url = raspiServer + "/api/v1/releaselock";
+
+        var request = new XMLHttpRequest();
+        request.open('POST', url, true);
+        request.onreadystatechange = function() {
+                if (request.readyState == 4) {
+                        if (request.status == 423)
+                                alert("Quick pi is locked by someone else");
+                }
+        };
+
+        request.send("");
+}
