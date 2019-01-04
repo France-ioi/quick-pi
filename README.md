@@ -46,6 +46,13 @@ rm /etc/wpa_supplicant/wpa_supplicant.conf
 ln -s /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf
 ```
 
+* Move the dhcpcd config and link it to /tmp liek this:
+
+```
+mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
+ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
+```
+
 * Copy the file scripts/setupwifi.sh to /etc and give it execution permisions `chmod +x /etc/setupwifi.sh`
 
 * Download Adafruit script to make the filesystem readonly: `wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/read-only-fs.sh; sudo bash read-only-fs.sh`. Answer N to "Enable boot-time jumper", "Install GPIO-halt utility" and `Enable kernel panic watchdog` so none of those is enabled.
@@ -55,6 +62,8 @@ ln -s /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf
 ```
 SSID=wifiname
 PASSWORD=wifipassword
+STATICNETWORK=1
+STATICIPADDR=192.168.1.31
 ```
 
 * Shutdown the Raspberry Pi using `sudo halt`. Remove the raspberry pi and take an image of the SD card of the exact same size of the original Raspbian Image you started with.
