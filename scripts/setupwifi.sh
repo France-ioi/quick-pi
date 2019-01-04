@@ -15,3 +15,10 @@ network={
 }
 " > /tmp/wpa_supplicant.conf
 
+cp /etc/dhcpcd.conf.template /tmp/dhcpcd.conf
+if [ $STATICNETWORK -eq "1" ]; then
+	echo "Static network config"
+	echo "
+interface wlan0
+static ip_address=$STATICIPADDR" >> /tmp/dhcpcd.conf
+fi
