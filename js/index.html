@@ -5,8 +5,13 @@
 	<body>
 		<div>
 			Raspberry Pi IP Address:
-			<input type="text" id="rpiaddress" value="192.168.1.86">
+			<input type="text" id="rpiaddress" value="192.168.1.31">
 		</div>
+                <div>
+                        Username:
+                        <input type="text" id="username" value="pablo">
+                </div>
+
 		<div>
 			<textarea rows="20" cols="50" id="pythoncode">
 while True:
@@ -19,11 +24,11 @@ while True:
 		</div>
 
 		<div>
-			<button onclick="updateRPIAddress();startOutputPoll('programoutput');executeProgram(document.getElementById('pythoncode').value);">Send program</button> 
+			<button onclick="updateRPIAddress();executeProgram(document.getElementById('pythoncode').value);">Send program</button> 
 		</div>
 
 		<div>
-			<button onclick="updateRPIAddress();stopProgram();stopProgramOutput();">Stop program</button>
+			<button onclick="updateRPIAddress();stopProgram();;">Stop program</button>
 		</div>
 
                 <div>
@@ -31,8 +36,22 @@ while True:
                 </div>
 
 		<div>
-			<textarea rows="20" cols="50" id="programoutput">
-			</textarea>
+			<input type="text" id="commands" value="turnLedOn()">
 		</div>
+
+                <div>
+                        <button onclick="updateRPIAddress(); startNewSession('programoutput');">New command session</button>
+                </div>
+
+                <div>
+                        <button onclick="updateRPIAddress(); sendCommand(document.getElementById('commands').value);">Send command</button>
+                </div>
+		
+
+
+		<div>
+			<textarea rows="20" cols="50" id="programoutput"></textarea>
+		</div>
+
 	</body>
 </html>

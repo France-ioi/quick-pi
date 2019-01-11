@@ -2,107 +2,130 @@ from flask import Flask
 from flask import request
 from flask import Response
 from flask_cors import CORS
+from flask_sockets import Sockets
 import os
+import gevent
+import json
+
+import pexpect
 
 app = Flask(__name__)
 CORS(app)
 
-def verifyLock(ipaddr):
-	canuse = False
-	try:
-		file = open("/tmp/lock", "r")
-		lockedip = file.read()
-		if lockedip == ipaddr:
-			canuse = True
-		file.close()
-	except:
-		pass
+sockets = Sockets(app)
 
-	return canuse
+@sockets.route('/api/v1/commands')
+def command_socket(ws):
+	c = None
+	command_mode = False
+	run_mode = False
 
-def veryfyOrTakeLock(ipaddr):
-	takelock = False
-	canuse = False
-	try:
-		# Is this quick pi already locked?
-		file = open("/tmp/lock", "r")
+	if os.path.isfile("/tmp/lock.txt"):
+		ws.send("Quick Pi locked")
 
-		lockedip = file.read()
+	open("/tmp/lock.txt", "w").close()
 
-		print(lockedip + " has the lock")
-		if lockedip == ipaddr:
-			print("This user has the lock")
-			# We have the lock we can use this
-			canuse = True
-	except:
-		takelock = True
+	while not ws.closed:
+		message = None
+		messageJson = None
+		with gevent.Timeout(0.5, False):
+			message = ws.receive()
 
-	if takelock:
-		# The quick pi is not locked, take the lock
-		print("Nobody has the lock tacking it")
-		file = open("/tmp/lock", "w")
-		file.write(ipaddr)
-		file.close()
+		if message is not None:
+			messageJson = json.loads(message)
 
-		# This user has the lock he can use it
-		canuse = True
+		if run_mode:
+			output = ""
+			try:
+				while True:
+					c.expect("\n", 0.01)
+					output += c.before
+			except pexpect.exceptions.TIMEOUT:
+				pass
+			except pexpect.exceptions.EOF:
+				c = None
+				run_mode = False
+				command_mode = False
+			if output != "":
+				ws.send(output)
 
-	return canuse
-
-@app.route("/api/v1/executeprogram", methods=['POST'])
-def executeProgram():
-	if veryfyOrTakeLock(request.remote_addr):
-		print("Executing program by " + request.remote_addr)
-		os.system("pkill -f userprogram; python3 cleanup.py")
-
-		file = open("/tmp/userprogram.py", "w")
-		file.write(request.data.decode("utf-8"))
-		file.close()
-
-		os.system("echo nice -n 19 python3 -u /tmp/userprogram.py &> /tmp/output.txt")
-		os.system("bash -c 'nice -n 19 python3 -u /tmp/userprogram.py &> /tmp/output.txt' &")
-	else:
-		print("Raspberry locked by someone else")
-		return Response("Quick Pi locked", 423)
-
-	return "OK"
-
-@app.route("/api/v1/stopprogram", methods=['POST'])
-def stopProgram():
-	if verifyLock(request.remote_addr):
-		print("Stopping program")
-
-		os.system("pkill -f userprogram")
-		os.system("python3 cleanup.py")
-		os.system("rm /tmp/output.txt")
-	else:
-		print("Raspberry locked by someone else")
-		return Response("Quick Pi locked", 423)
-
-	return "OK"
-
-@app.route("/api/v1/readoutput")
-def readOutput():
-	output = ""
-	if verifyLock(request.remote_addr):
-		output = ""
-		try:
-			file = open("/tmp/output.txt", "r")
-			output = file.read()
-		except:
+		if messageJson is None:
 			pass
-	return output
+		elif messageJson["command"] == 'startCommandMode':
+			if c is not None:
+				c.terminate()
+				os.system("python3 cleanup.py")
 
-@app.route("/api/v1/releaselock", methods=['POST'])
-def releaseLock():
-	if verifyLock(request.remote_addr):
-		os.system("rm /tmp/lock")
-	else:
-		return Response("Quick Pi locked", 423)
+			print (" NEW session ");
 
-	return "OK"
+			file = open("/tmp/quickpi.lib", "w")
+			file.write(messageJson["library"])
+			file.close()
+
+			c = pexpect.spawnu('/usr/bin/python3 -i /tmp/quickpi.lib')
+			c.expect('>>>')
+
+			command_mode = True
+			run_mode = False
+
+			print ("-------------")
+
+		elif messageJson["command"] == 'execLine':
+			print("Got message " + message[1:])
+
+			if c is None or not command_mode:
+				continue
+
+			c.sendline(messageJson["line"])
+			c.expect('>>>')
+
+			output = c.before.split("\n", 1)
+			result = output[1].strip()
+
+			if result == "":
+				result = "none"
+
+			print("Result is " + result)
+
+			ws.send(output[1].strip())
+		elif messageJson["command"] == 'startRunMode':
+			print ("Starting run mode")
+			if c is not None:
+				c.terminate()
+				os.system("python3 cleanup.py")
+
+			file = open("/tmp/userprogram.py", "w")
+			file.write(messageJson["program"])
+			file.close()
+
+			c = pexpect.spawnu('/usr/bin/python3 /tmp/userprogram.py')
+
+			command_mode = False
+			run_mode = True
+		elif messageJson["command"] == 'stopAll':
+			if c is not None:
+				c.terminate()
+				os.system("python3 cleanup.py")
+
+			command_mode = False
+			run_mode = False
+		elif messageJson["command"] == "close":
+			break
+
+
+	print ("Clean up ...")
+	os.remove("/tmp/lock.txt")
+	if c is not None:
+		c.terminate()
+		os.system("python3 cleanup.py")
+
+
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+#    app.run(debug=True, host='0.0.0.0')
+    from gevent import pywsgi
+    from geventwebsocket.handler import WebSocketHandler
+    server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
+    server.serve_forever()
 
