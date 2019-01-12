@@ -55,6 +55,11 @@ function stopProgram() {
 
 function releaseLock()
 {
+        if (wsSession == null) {
+                connectoToRPI(releaseLock);
+                return;
+        }
+
 	if (wsSession != null) {
                 var command =
                 {
@@ -98,6 +103,15 @@ function connectoToRPI(onConnect)
 	wsSession = new WebSocket(url);
 
 	wsSession.onopen = function() {
+                var command =
+                {
+                        "command" : "grabLock",
+                        "username" : getUserName()
+                }
+
+                wsSession.send(JSON.stringify(command));
+
+
 		onConnect();
 
 		setOutput ("New session established\n");
@@ -140,4 +154,9 @@ function appendOutput(string)
 	var textArea = document.getElementById("programoutput");
 
 	textArea.value += string;
+}
+
+function getUserName()
+{
+	return document.getElementById("username").value;
 }
