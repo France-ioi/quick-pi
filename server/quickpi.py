@@ -14,16 +14,58 @@ CORS(app)
 
 sockets = Sockets(app)
 
+def veryfyOrTakeLock(username):
+	takelock = False
+	canuse = False
+	try:
+		# Is this quick pi already locked?
+		file = open("/tmp/lock", "r")
+
+		lockedusername = file.read()
+
+		print(lockedusername + " has the lock")
+		if lockedusername == username:
+			print("This user has the lock")
+			# We have the lock we can use this
+			canuse = True
+	except:
+		takelock = True
+
+	if takelock:
+		# The quick pi is not locked, take the lock
+		print("Nobody has the lock tacking it")
+		file = open("/tmp/lock", "w")
+		file.write(username)
+		file.close()
+
+		# This user has the lock he can use it
+		canuse = True
+
+	return canuse, username
+
 @sockets.route('/api/v1/commands')
 def command_socket(ws):
 	c = None
 	command_mode = False
 	run_mode = False
 
-	if os.path.isfile("/tmp/lock.txt"):
-		ws.send("Quick Pi locked")
+	message = ws.receive()
 
-	open("/tmp/lock.txt", "w").close()
+
+	if message is not None:
+		messageJson = json.loads(message)
+		## First message has to be grabLock
+		if messageJson["command"] != 'grabLock':
+			print ("Was expecting grabLock Message")
+			return
+
+		print ("Verifying lock")
+		canuse, lockeduser = veryfyOrTakeLock(messageJson["username"])
+		if not canuse:
+			print("Pi is locked by " + lockeduser)
+			ws.send("Quick Pi locked by " + lockeduser)
+			return
+
 
 	while not ws.closed:
 		message = None
@@ -110,11 +152,11 @@ def command_socket(ws):
 			command_mode = False
 			run_mode = False
 		elif messageJson["command"] == "close":
+			os.remove("/tmp/lock")
 			break
 
 
 	print ("Clean up ...")
-	os.remove("/tmp/lock.txt")
 	if c is not None:
 		c.terminate()
 		os.system("python3 cleanup.py")
