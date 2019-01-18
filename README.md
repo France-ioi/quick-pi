@@ -12,7 +12,7 @@ Tools to enable programming a Raspberry Pi from the QuickAlgo environment
 
 * Run `sudo raspi-config` and enable SSH (for easier remote management and setup WiFi).
 
-* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect` then `pip3 install flask-cors Flask-Sockets cffi`.
+* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus` then `pip3 install flask-cors Flask-Sockets cffi`.
 
 * Copy the contents of the `server` directory into the Raspberry Pi using scp. This is a flask webapp that will run the programs in the Raspberry Pi. Run it using `python3 quickpi.py`.
 
