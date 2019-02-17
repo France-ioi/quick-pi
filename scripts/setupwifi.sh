@@ -20,5 +20,7 @@ if [ $STATICNETWORK -eq "1" ]; then
 	echo "Static network config"
 	echo "
 interface wlan0
-static ip_address=$STATICIPADDR" >> /tmp/dhcpcd.conf
+static ip_address=$STATICIPADDR
+static routers=$STATICGATEWAY
+static domain_name_servers=$STATICDNS" >> /tmp/dhcpcd.conf
 fi
