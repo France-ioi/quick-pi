@@ -8,11 +8,24 @@ Tools to enable programming a Raspberry Pi from the QuickAlgo environment
 * If you are planing to make this a production ready image reinsert the SD card into the machine you used to write it and go to the drive. You will find a cmdline.txt file. Open it and delete `init=/usr/lib/raspi-config/init_resize.sh
 ` from the end of the command line. This will prevent the filesystem to be resized to fill the whole size of your sd card.
 
+* Create a 100M partition after the root partition to store the installed program (the root partition is read only):
+
+```
+echo -e "n\n\n\n4000000\n+100M\nw\nq\n" | fdisk /dev/mmcblk0
+partprobe
+
+mkfs.ext4 /dev/mmcblk0p3
+mkdir /mnt/data
+chown pi.pi /mnt/data/
+echo "/dev/mmcblk0p3 /mnt/data ext4 defaults 0 2" >> /etc/fstab
+```
+
+
 * Boot the Raspberry Pi (connect a keyboard and display), login with the default pi/raspbian user password.
 
 * Run `sudo raspi-config` and enable SSH (for easier remote management and setup WiFi).
 
-* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus` then `pip3 install flask-cors Flask-Sockets cffi`.
+* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio` then `sudo pip3 install flask-cors Flask-Sockets cffi`. `sudo systemctl enable pigpiod`
 
 * Copy the contents of the `server` directory into the Raspberry Pi using scp. This is a flask webapp that will run the programs in the Raspberry Pi. Run it using `python3 quickpi.py`.
 
@@ -20,11 +33,18 @@ Tools to enable programming a Raspberry Pi from the QuickAlgo environment
 
 * Write the Raspberry Pi IP address in the field and you can start trying programs.
 
+
+
 # How to create a production ready image
 
 First run all of the above steps then:
 
-* Add the following command to /etc/rc.local: `su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app"`
+* Add the following command to /etc/rc.local:
+
+```
+su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
+su pi -c "/home/pi/quickpi/install.sh run" &
+```
 
 * Edit the file /lib/systemd/system/raspberrypi-net-mods.service so it look like this:
 
@@ -55,8 +75,6 @@ ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
 
 * Copy the file scripts/setupwifi.sh to /etc and give it execution permisions `chmod +x /etc/setupwifi.sh`
 
-* Download Adafruit script to make the filesystem readonly: `wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/read-only-fs.sh; sudo bash read-only-fs.sh`. Answer N to "Enable boot-time jumper", "Install GPIO-halt utility" and `Enable kernel panic watchdog` so none of those is enabled.
-
 * Create a dummy wifi.txt file in the boot partition with the following contents:
 
 ```
@@ -64,7 +82,11 @@ SSID=wifiname
 PASSWORD=wifipassword
 STATICNETWORK=1
 STATICIPADDR=192.168.1.31
+STATICGATEWAY=192.168.1.1
+STATICDNS=8.8.8.8
 ```
+
+* Download Adafruit script to make the filesystem readonly: `wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/read-only-fs.sh; sudo bash read-only-fs.sh`. Answer N to "Enable boot-time jumper", "Install GPIO-halt utility" and `Enable kernel panic watchdog` so none of those is enabled.
 
 * Shutdown the Raspberry Pi using `sudo halt`. Remove the raspberry pi and take an image of the SD card of the exact same size of the original Raspbian Image you started with.
 

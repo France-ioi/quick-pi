@@ -50,9 +50,10 @@ def command_socket(ws):
 	run_mode = False
 
 	message = ws.receive()
-
+	print ("First message was " + message)
 
 	if message is not None:
+		print ("Converting to json")
 		messageJson = json.loads(message)
 		## First message has to be grabLock
 		if messageJson["command"] != 'grabLock':
@@ -67,9 +68,12 @@ def command_socket(ws):
 			return
 
 
+	print ("While not ws.closed")
 	while not ws.closed:
 		message = None
 		messageJson = None
+
+		print("Waiting for first message")
 		with gevent.Timeout(0.5, False):
 			message = ws.receive()
 
@@ -94,11 +98,13 @@ def command_socket(ws):
 		if messageJson is None:
 			pass
 		elif messageJson["command"] == 'startCommandMode':
+			os.system("./install.sh clean &")
+
 			if c is not None:
 				c.terminate()
 				os.system("python3 cleanup.py")
 
-			print (" NEW session ");
+			print ("NEW session ");
 
 			file = open("/tmp/quickpi.lib", "w")
 			file.write(messageJson["library"])
@@ -113,9 +119,10 @@ def command_socket(ws):
 			print ("-------------")
 
 		elif messageJson["command"] == 'execLine':
-			print("Got message " + message[1:])
+			print("Executing command: [" + messageJson["line"] + "]")
 
 			if c is None or not command_mode:
+				print("Not in command mode")
 				continue
 
 			c.sendline(messageJson["line"])
@@ -132,6 +139,8 @@ def command_socket(ws):
 			ws.send(output[1].strip())
 		elif messageJson["command"] == 'startRunMode':
 			print ("Starting run mode")
+			os.system("./install.sh clean &")
+
 			if c is not None:
 				c.terminate()
 				os.system("python3 cleanup.py")
@@ -154,14 +163,28 @@ def command_socket(ws):
 		elif messageJson["command"] == "close":
 			os.remove("/tmp/lock")
 			break
+		elif messageJson["command"] == "install":
+			os.system("./install.sh clean &")
 
+			print("Installing...")
+			if c is not None:
+				c.terminate()
+				os.system("python3 cleanup.py")
+
+			file = open("/tmp/userprogram.py", "w")
+			file.write(messageJson["program"])
+			file.close()
+
+			os.system("/usr/bin/python3 /tmp/userprogram.py &")
+			os.system("./install.sh install /tmp/userprogram.py &")
+
+			command_mode = False
+			run_mode = False
 
 	print ("Clean up ...")
 	if c is not None:
 		c.terminate()
 		os.system("python3 cleanup.py")
-
-
 
 
 if __name__ == '__main__':
@@ -170,4 +193,3 @@ if __name__ == '__main__':
     from geventwebsocket.handler import WebSocketHandler
     server = pywsgi.WSGIServer(('', 5000), app, handler_class=WebSocketHandler)
     server.serve_forever()
-
