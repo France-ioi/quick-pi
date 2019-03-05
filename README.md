@@ -23,9 +23,9 @@ echo "/dev/mmcblk0p3 /mnt/data ext4 defaults 0 2" >> /etc/fstab
 
 * Boot the Raspberry Pi (connect a keyboard and display), login with the default pi/raspbian user password.
 
-* Run `sudo raspi-config` and enable SSH (for easier remote management and setup WiFi).
+* Run `sudo raspi-config` and enable SSH (for easier remote management and setup WiFi), also enable I2C (Needed for analog sensors).
 
-* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio` then `sudo pip3 install flask-cors Flask-Sockets cffi`. `sudo systemctl enable pigpiod`
+* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio` then `sudo pip3 install flask-cors Flask-Sockets`. `sudo systemctl enable pigpiod`
 
 * Copy the contents of the `server` directory into the Raspberry Pi using scp. This is a flask webapp that will run the programs in the Raspberry Pi. Run it using `python3 quickpi.py`.
 
@@ -44,6 +44,7 @@ First run all of the above steps then:
 ```
 su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
 su pi -c "/home/pi/quickpi/install.sh run" &
+/etc/ping.sh &
 ```
 
 * Edit the file /lib/systemd/system/raspberrypi-net-mods.service so it look like this:
@@ -73,7 +74,7 @@ mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
 ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
 ```
 
-* Copy the file scripts/setupwifi.sh to /etc and give it execution permisions `chmod +x /etc/setupwifi.sh`
+* Copy the scripts in scripts/ to /etc and give them execution permisions `chmod +x /etc/setupwifi.sh` `chmod +x /etc/ping.sh`
 
 * Create a dummy wifi.txt file in the boot partition with the following contents:
 
@@ -84,6 +85,9 @@ STATICNETWORK=1
 STATICIPADDR=192.168.1.31
 STATICGATEWAY=192.168.1.1
 STATICDNS=8.8.8.8
+
+NAME=quickpi1
+SCHOOL=schoolkey
 ```
 
 * Download Adafruit script to make the filesystem readonly: `wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/read-only-fs.sh; sudo bash read-only-fs.sh`. Answer N to "Enable boot-time jumper", "Install GPIO-halt utility" and `Enable kernel panic watchdog` so none of those is enabled.
