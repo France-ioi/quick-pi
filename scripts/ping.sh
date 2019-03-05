@@ -3,10 +3,6 @@ source /tmp/wifi.txt
 while [ 1 ]
 do
 	MYIP=$(hostname -I | awk '{$1=$1};1')
-	NAME=pi1
-	SCHOOL=school1
-
-	echo $MYIP
 
 	curl --header "Content-Type: application/json" \
 	  --request POST \
