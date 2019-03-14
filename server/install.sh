@@ -14,7 +14,7 @@ if [ $1 == "run" ]; then
 fi
 
 if [ $1 == "clean" ]; then
-	pkill -f $INSTALLFILE
+	pkill -9 -f $(basename $INSTALLFILE)
 	rm -f $2 $INSTALLFILE
 fi
 

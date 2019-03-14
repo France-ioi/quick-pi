@@ -6,6 +6,7 @@ from flask_sockets import Sockets
 import os
 import gevent
 import json
+import time
 
 import pexpect
 
@@ -43,12 +44,19 @@ def veryfyOrTakeLock(username):
 
 	return canuse, username
 
+def write_timestamp(type):
+	file = open("/tmp/time-" + type, "w")
+	file.write(str(int(time.time())))
+	file.close()
+
+
 @sockets.route('/api/v1/commands')
 def command_socket(ws):
 	c = None
 	command_mode = False
 	run_mode = False
 
+	print (".")
 	message = ws.receive()
 	print ("First message was " + message)
 
@@ -63,10 +71,14 @@ def command_socket(ws):
 		print ("Verifying lock")
 		canuse, lockeduser = veryfyOrTakeLock(messageJson["username"])
 		if not canuse:
+			message = { "command": "locked",
+				    "lockedby": lockeduser }
+
 			print("Pi is locked by " + lockeduser)
-			ws.send("Quick Pi locked by " + lockeduser)
+			ws.send(json.dumps(message))
 			return
 
+	write_timestamp("connection")
 
 	print ("While not ws.closed")
 	while not ws.closed:
@@ -79,6 +91,7 @@ def command_socket(ws):
 
 		if message is not None:
 			messageJson = json.loads(message)
+			print("Got message " + messageJson["command"])
 
 		if run_mode:
 			output = ""
@@ -97,12 +110,18 @@ def command_socket(ws):
 
 		if messageJson is None:
 			pass
+		elif messageJson["command"] == 'ping':
+			message = { "command": "pong" }
+			ws.send(json.dumps(message))
+
 		elif messageJson["command"] == 'startCommandMode':
 			os.system("./install.sh clean &")
 
 			if c is not None:
 				c.terminate()
 				os.system("python3 cleanup.py")
+
+			write_timestamp("session")
 
 			print ("NEW session ");
 
@@ -123,6 +142,13 @@ def command_socket(ws):
 
 			if c is None or not command_mode:
 				print("Not in command mode")
+
+				message = { "command": "execLineresult",
+						"result": "0",
+						"error": "not in command mode" }
+
+				ws.send(json.dumps(message))
+
 				continue
 
 			c.sendline(messageJson["line"])
@@ -136,7 +162,12 @@ def command_socket(ws):
 
 			print("Result is " + result)
 
-			ws.send(output[1].strip())
+
+			message = { "command": "execLineresult",
+					"result": output[1].strip() }
+
+			ws.send(json.dumps(message))
+
 		elif messageJson["command"] == 'startRunMode':
 			print ("Starting run mode")
 			os.system("./install.sh clean &")
@@ -166,17 +197,23 @@ def command_socket(ws):
 		elif messageJson["command"] == "install":
 			os.system("./install.sh clean &")
 
+			write_timestamp("install")
+
 			print("Installing...")
 			if c is not None:
 				c.terminate()
 				os.system("python3 cleanup.py")
 
-			file = open("/tmp/userprogram.py", "w")
+			file = open("/tmp/installedprogram.py", "w")
 			file.write(messageJson["program"])
 			file.close()
 
-			os.system("/usr/bin/python3 /tmp/userprogram.py &")
-			os.system("./install.sh install /tmp/userprogram.py &")
+			os.system("/usr/bin/python3 /tmp/installedprogram.py &")
+			os.system("./install.sh install /tmp/installedprogram.py &")
+
+
+			message = { "command": "installed" }
+			ws.send(json.dumps(message))
 
 			command_mode = False
 			run_mode = False
