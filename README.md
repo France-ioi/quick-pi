@@ -25,7 +25,7 @@ echo "/dev/mmcblk0p3 /mnt/data ext4 defaults 0 2" >> /etc/fstab
 
 * Run `sudo raspi-config` and enable SSH (for easier remote management and setup WiFi), also enable I2C (Needed for analog sensors).
 
-* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio` then `sudo pip3 install flask-cors Flask-Sockets`. `sudo systemctl enable pigpiod`
+* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio  bluez-tools dnsmasq bridge-utils` then `sudo pip3 install flask-cors Flask-Sockets`. `sudo systemctl enable pigpiod`
 
 * Copy the contents of the `server` directory into the Raspberry Pi using scp. This is a flask webapp that will run the programs in the Raspberry Pi. Run it using `python3 quickpi.py`.
 
@@ -39,12 +39,18 @@ echo "/dev/mmcblk0p3 /mnt/data ext4 defaults 0 2" >> /etc/fstab
 
 First run all of the above steps then:
 
+* Add `dtoverlay=dwc2,dr_mode=peripheral` to the bottom of /boot/config.txt
+
+* Add `modules-load=dwc2,g_ether` in /boot/cmdline.txt right next to `rootwait`. Don't introduce new lines into this file.
+
+
 * Add the following command to /etc/rc.local:
 
 ```
 su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
 su pi -c "/home/pi/quickpi/install.sh run" &
 /etc/ping.sh &
+/etc/startbluetooth.sh &
 ```
 
 * Edit the file /lib/systemd/system/raspberrypi-net-mods.service so it look like this:
@@ -74,9 +80,29 @@ mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
 ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
 ```
 
-* Copy the scripts in scripts/ to /etc and give them execution permisions `chmod +x /etc/setupwifi.sh` `chmod +x /etc/ping.sh`
+* Add the following to the bottom of /etc/dhcpcd.conf.template
 
-* Create a dummy wifi.txt file in the boot partition with the following contents:
+```
+interface usb0
+static ip_address=192.168.233.1
+```
+
+* Edit /etc/dnsmasq.conf so that this is the entiere contents:
+
+```
+interface=usb0
+dhcp-range=192.168.233.10,192.168.233.20,24h
+```
+
+* Delete /var/lib/ and link it to /tmp
+```
+rm -rf /var/lib/misc
+ln -s /tmp /var/lib/misc 
+```
+
+* Copy the scripts in scripts/ to /etc and give them execution permisions `chmod +x /etc/setupwifi.sh` `chmod +x /etc/ping.sh` and `chmod +x /etc/startbluetooth.sh`
+
+* Create a dummy quickpi.txt file in the boot partition with the following contents:
 
 ```
 SSID=wifiname

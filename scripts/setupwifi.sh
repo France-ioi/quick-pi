@@ -1,8 +1,8 @@
 #!/bin/bash
 
-cp /boot/wifi.txt /tmp
-dos2unix /tmp/wifi.txt
-source /tmp/wifi.txt
+cp /boot/quickpi.txt /tmp
+dos2unix /tmp/quickpi.txt
+source /tmp/quickpi.txt
 
 echo "
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
