@@ -92,6 +92,8 @@ static ip_address=192.168.233.1
 ```
 interface=usb0
 dhcp-range=192.168.233.10,192.168.233.20,24h
+dhcp-option=3
+dhcp-option=6
 ```
 
 * Delete /var/lib/ and link it to /tmp
@@ -114,6 +116,7 @@ STATICDNS=8.8.8.8
 
 NAME=quickpi1
 SCHOOL=schoolkey
+SCHOOLPASSWORD=schoolpassword
 ```
 
 * Download Adafruit script to make the filesystem readonly: `wget https://raw.githubusercontent.com/adafruit/Raspberry-Pi-Installer-Scripts/master/read-only-fs.sh; sudo bash read-only-fs.sh`. Answer N to "Enable boot-time jumper", "Install GPIO-halt utility" and `Enable kernel panic watchdog` so none of those is enabled.

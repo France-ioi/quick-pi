@@ -9,7 +9,7 @@ fi
 if [ $1 == "run" ]; then
 	if [ -f $INSTALLFILE ]; then
 		echo "Starting installed file"
-		python3 $INSTALLFILE &
+		nice -n 19 python3 $INSTALLFILE &
 	fi
 fi
 

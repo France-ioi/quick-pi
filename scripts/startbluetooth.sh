@@ -1,13 +1,12 @@
 #!/bin/bash
 
+ENABLEBLUETOOTH=0
 source /tmp/quickpi.txt
 
 if [ $ENABLEBLUETOOTH -ne "1" ]; then
     exit;
 fi
 
-
-source /tmp/wifi.txt
 
 /sbin/brctl addbr pan0
 

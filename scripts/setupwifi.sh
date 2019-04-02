@@ -1,7 +1,9 @@
 #!/bin/bash
 
-cp /boot/quickpi.txt /tmp
-dos2unix /tmp/quickpi.txt
+cp /boot/quickpi.txt /tmp/quickpi-tmp.txt
+dos2unix /tmp/quickpi-tmp.txt
+echo "set -e" > /tmp/quickpi.txt
+cat /tmp/quickpi-tmp.txt >> /tmp/quickpi.txt
 source /tmp/quickpi.txt
 
 echo "
@@ -24,3 +26,5 @@ static ip_address=$STATICIPADDR
 static routers=$STATICGATEWAY
 static domain_name_servers=$STATICDNS" >> /tmp/dhcpcd.conf
 fi
+
+/bin/systemctl daemon-reload
