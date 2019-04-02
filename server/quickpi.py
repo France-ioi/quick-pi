@@ -85,7 +85,7 @@ def command_socket(ws):
 		message = None
 		messageJson = None
 
-		print("Waiting for first message")
+		#print("Waiting for first message")
 		with gevent.Timeout(0.5, False):
 			message = ws.receive()
 
@@ -134,6 +134,9 @@ def command_socket(ws):
 
 			command_mode = True
 			run_mode = False
+
+			message = { "command": "startCommandMode" }
+			ws.send(json.dumps(message))
 
 			print ("-------------")
 
@@ -208,7 +211,7 @@ def command_socket(ws):
 			file.write(messageJson["program"])
 			file.close()
 
-			os.system("/usr/bin/python3 /tmp/installedprogram.py &")
+			os.system("nice -n 19 /usr/bin/python3 /tmp/installedprogram.py &")
 			os.system("./install.sh install /tmp/installedprogram.py &")
 
 
