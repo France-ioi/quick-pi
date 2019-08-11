@@ -28,6 +28,11 @@ if [ "$DISABLEPING" -eq "1" ]; then
     exit;
 fi
 
+MYMAC=$(ip addr show wlan0 | grep "ether\b" | awk '{print $2}' | cut -d/ -f1 | /usr/bin/awk '{$1=$1};1')
+MYACPART1=$(echo $MYMAC | cut -d ":" -f 1)
+MYACPART2=$(echo $MYMAC | cut -d ":" -f 2-)
+
+
 TIME_BOOT_ORIG=$(/bin/date +%s)
 echo $TIME_BOOT_ORIG
 
@@ -89,17 +94,18 @@ do
 			/etc/showtext.py "Failed to ping" "SERVER ERROR"
 		fi
 
-		sleep 5
+		sleep 10
 
 		WIFISTATUS=$(cat /sys/class/net/wlan0/carrier)
 		if [  "$WIFISTATUS" -ne "1" ]; then
-		        /etc/showtext.py "WIFI" "CANT CONNET"
+		        /etc/showtext.py "WIFI" "CANT CONNECT"
 		else
-			WIFIIP=$(ip addr show wlan0|grep inet|grep -v inet6 | cut -d/ -f 1 | awk '{print $2}')
-			/etc/showtext.py "WIFI IP" "$WIFIIP"
+			/etc/showtext.py "WIFI IP" "$MYIP"
 		fi
 
-		sleep 5
+		sleep 10
+
+		/etc/showtext.py "WIFI MAC $MYACPART1:" "$MYACPART2"
 	fi
 
 	sleep 30

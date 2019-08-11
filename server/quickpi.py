@@ -7,8 +7,8 @@ import os
 import gevent
 import json
 import time
-
 import pexpect
+import picleanup
 
 app = Flask(__name__)
 CORS(app)
@@ -54,7 +54,9 @@ def write_timestamp(type):
 def command_socket(ws):
 	c = None
 	command_mode = False
-	run_mode = False
+	command_mode_dirty = False
+	command_mode_library = ""
+	clean_install = True
 
 	print (".")
 	message = ws.receive()
@@ -78,6 +80,17 @@ def command_socket(ws):
 			ws.send(json.dumps(message))
 			return
 
+	quickpiname = "quickpi"
+	try:
+		quickpiname = os.environ['NAME']
+	except:
+		pass
+
+	message = { "command": "hello",
+		    "name": quickpiname }
+	ws.send(json.dumps(message))
+
+
 	write_timestamp("connection")
 
 	print ("While not ws.closed")
@@ -91,22 +104,7 @@ def command_socket(ws):
 
 		if message is not None:
 			messageJson = json.loads(message)
-			print("Got message " + messageJson["command"])
-
-		if run_mode:
-			output = ""
-			try:
-				while True:
-					c.expect("\n", 0.01)
-					output += c.before
-			except pexpect.exceptions.TIMEOUT:
-				pass
-			except pexpect.exceptions.EOF:
-				c = None
-				run_mode = False
-				command_mode = False
-			if output != "":
-				ws.send(output)
+#			print("Got message " + messageJson["command"])
 
 		if messageJson is None:
 			pass
@@ -115,44 +113,70 @@ def command_socket(ws):
 			ws.send(json.dumps(message))
 
 		elif messageJson["command"] == 'startCommandMode':
-			os.system("./install.sh clean &")
+			if clean_install:
+				os.system("./install.sh clean &")
+				clean_install = False
 
-			if c is not None:
-				c.terminate()
-				os.system("python3 cleanup.py")
+			# Only reload the python process if we changed the python library
+			# or weren't in command mode previously
+			startNewProcess = False
+			if (not command_mode) or (command_mode_library != messageJson["library"]):
+				print("Changed library");
+				if c is not None:
+					c.terminate()
+				startNewProcess = True
+
+
+			# Only run cleanup if we were actually did something with the previous session
+			if (not command_mode) or command_mode_dirty:
+				print("Is dirty")
+				picleanup.docleanup()
+				#os.system("python3 cleanup.py")
 
 			write_timestamp("session")
 
 			print ("NEW session ");
 
-			file = open("/tmp/quickpi.lib", "w")
-			file.write(messageJson["library"])
-			file.close()
+			if command_mode_library != messageJson["library"]:
+				file = open("/tmp/quickpi.lib", "w")
+				file.write(messageJson["library"])
+				file.close()
 
-			c = pexpect.spawnu('/usr/bin/python3 -i /tmp/quickpi.lib')
-			c.expect('>>>')
+			if startNewProcess:
+				print ("Starting new process")
+				c = pexpect.spawnu('/usr/bin/python3 -i /tmp/quickpi.lib')
+				c.expect('>>>')
 
+			command_mode_library = messageJson["library"]
+			command_mode_dirty = False
 			command_mode = True
-			run_mode = False
 
 			message = { "command": "startCommandMode" }
 			ws.send(json.dumps(message))
 
-			print ("-------------")
-
 		elif messageJson["command"] == 'execLine':
-			print("Executing command: [" + messageJson["line"] + "]")
+#			print("Executing command: [" + messageJson["line"] + "]")
+
+			seq = 0
+			try:
+				seq = messageJson["seq"]
+			except:
+				pass
 
 			if c is None or not command_mode:
 				print("Not in command mode")
 
 				message = { "command": "execLineresult",
 						"result": "0",
-						"error": "not in command mode" }
+						"error": "not in command mode",
+						"seq": seq
+					  }
 
 				ws.send(json.dumps(message))
 
 				continue
+
+			command_mode_dirty = True
 
 			c.sendline(messageJson["line"])
 			c.expect('>>>')
@@ -165,40 +189,25 @@ def command_socket(ws):
 
 			print("Result is " + result)
 
-
 			message = { "command": "execLineresult",
-					"result": output[1].strip() }
+				    "result": output[1].strip(),
+				    "seq": seq
+				  }
 
 			ws.send(json.dumps(message))
 
-		elif messageJson["command"] == 'startRunMode':
-			print ("Starting run mode")
-			os.system("./install.sh clean &")
-
-			if c is not None:
-				c.terminate()
-				os.system("python3 cleanup.py")
-
-			file = open("/tmp/userprogram.py", "w")
-			file.write(messageJson["program"])
-			file.close()
-
-			c = pexpect.spawnu('/usr/bin/python3 /tmp/userprogram.py')
-
-			command_mode = False
-			run_mode = True
 		elif messageJson["command"] == 'stopAll':
 			if c is not None:
 				c.terminate()
 				os.system("python3 cleanup.py")
 
 			command_mode = False
-			run_mode = False
 		elif messageJson["command"] == "close":
 			os.remove("/tmp/lock")
 			break
 		elif messageJson["command"] == "install":
-			os.system("./install.sh clean &")
+			if clean_install:
+				os.system("./install.sh clean &")
 
 			write_timestamp("install")
 
@@ -219,7 +228,7 @@ def command_socket(ws):
 			ws.send(json.dumps(message))
 
 			command_mode = False
-			run_mode = False
+			clean_install = True
 
 	print ("Clean up ...")
 	if c is not None:
