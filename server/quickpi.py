@@ -9,6 +9,7 @@ import json
 import time
 import pexpect
 import picleanup
+import boards
 
 app = Flask(__name__)
 CORS(app)
@@ -50,9 +51,11 @@ def write_timestamp(type):
 	file.close()
 
 
+
 @sockets.route('/api/v1/commands')
 def command_socket(ws):
 	c = None
+	longCommand = None
 	command_mode = False
 	command_mode_dirty = False
 	command_mode_library = ""
@@ -86,8 +89,11 @@ def command_socket(ws):
 	except:
 		pass
 
+	currentboard = boards.detectBoard()
+
 	message = { "command": "hello",
-		    "name": quickpiname }
+		    "name": quickpiname,
+		    "board": currentboard }
 	ws.send(json.dumps(message))
 
 
@@ -107,7 +113,36 @@ def command_socket(ws):
 #			print("Got message " + messageJson["command"])
 
 		if messageJson is None:
-			pass
+			if longCommand is not None:
+				print("Checking on long command")
+				messageJson = longCommand
+				seq = 0
+				try:
+					seq = messageJson["seq"]
+				except:
+					pass
+
+				try:
+					c.expect('>>>', timeout=1)
+					longCommand = None
+				except pexpect.exceptions.TIMEOUT:
+					print("TIMEOUT!!!!!!")
+
+				if longCommand is None:
+					output = c.before.split("\n", 1)
+					result = output[1].strip()
+
+					if result == "":
+						result = "none"
+
+					print(messageJson["line"], "Result is", result, "seq", seq)
+
+					message = { "command": "execLineresult",
+						    "result": output[1].strip(),
+						    "seq": seq
+						  }
+
+					ws.send(json.dumps(message))
 		elif messageJson["command"] == 'ping':
 			message = { "command": "pong" }
 			ws.send(json.dumps(message))
@@ -120,7 +155,7 @@ def command_socket(ws):
 			# Only reload the python process if we changed the python library
 			# or weren't in command mode previously
 			startNewProcess = False
-			if (not command_mode) or (command_mode_library != messageJson["library"]):
+			if (not command_mode) or (command_mode_library != messageJson["library"] or longCommand):
 				print("Changed library");
 				if c is not None:
 					c.terminate()
@@ -134,6 +169,7 @@ def command_socket(ws):
 				#os.system("python3 cleanup.py")
 
 			write_timestamp("session")
+			longCommand = None
 
 			print ("NEW session ");
 
@@ -157,9 +193,17 @@ def command_socket(ws):
 		elif messageJson["command"] == 'execLine':
 #			print("Executing command: [" + messageJson["line"] + "]")
 
+			longCommand = None
 			seq = 0
+			long = False
 			try:
 				seq = messageJson["seq"]
+			except:
+				print("Command has no sequence!")
+				pass
+
+			try:
+				long = messageJson["long"]
 			except:
 				pass
 
@@ -179,28 +223,35 @@ def command_socket(ws):
 			command_mode_dirty = True
 
 			c.sendline(messageJson["line"])
-			c.expect('>>>')
 
-			output = c.before.split("\n", 1)
-			result = output[1].strip()
+			try:
+				c.expect('>>>', timeout=5)
+			except pexpect.exceptions.TIMEOUT:
+				print("TIMEOUT!!!!!!")
+				longCommand = messageJson
 
-			if result == "":
-				result = "none"
+			if longCommand is None:
+				output = c.before.split("\n", 1)
+				result = output[1].strip()
 
-			print("Result is " + result)
+				if result == "":
+					result = "none"
 
-			message = { "command": "execLineresult",
-				    "result": output[1].strip(),
-				    "seq": seq
-				  }
+				print(messageJson["line"], "Result is", result, "seq", seq)
 
-			ws.send(json.dumps(message))
+				message = { "command": "execLineresult",
+					    "result": output[1].strip(),
+					    "seq": seq
+					  }
+
+				ws.send(json.dumps(message))
 
 		elif messageJson["command"] == 'stopAll':
 			if c is not None:
 				c.terminate()
 				os.system("python3 cleanup.py")
 
+			longCommand = None
 			command_mode = False
 		elif messageJson["command"] == "close":
 			os.remove("/tmp/lock")
@@ -208,6 +259,8 @@ def command_socket(ws):
 		elif messageJson["command"] == "install":
 			if clean_install:
 				os.system("./install.sh clean &")
+
+			longCommand = None
 
 			write_timestamp("install")
 
