@@ -44,6 +44,7 @@ First run all of the above steps then:
 
 * Add `modules-load=dwc2,g_ether` in /boot/cmdline.txt right next to `rootwait`. Don't introduce new lines into this file.
 
+* Edit /lib/systemd/system/pigpiod.service to change pigpiod command line to the following `/usr/bin/pigpiod -n 127.0.0.1 -l -m -x -1`
 
 * Add the following command to /etc/rc.local:
 
