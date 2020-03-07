@@ -89,6 +89,8 @@ mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
 ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
 
 denyinterfaces ap0
+interface ap0
+nohook wpa_supplicant
 ```
 
 * Add the following to the bottom of /etc/dhcpcd.conf.template
