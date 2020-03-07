@@ -1,11 +1,6 @@
 # quick-pi
 Tools to enable programming a Raspberry Pi from the QuickAlgo environment
 
-25600
-
-
-5
-15
 
 # How to setup
 
@@ -31,7 +26,7 @@ echo "/dev/mmcblk0p3 /mnt/data ext4 defaults 0 2" >> /etc/fstab
 
 * Run `sudo raspi-config` and enable SSH (for easier remote management and setup WiFi), also enable I2C (Needed for analog sensors).
 
-* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio  bluez-tools dnsmasq bridge-utils python3-pil` then `sudo pip3 install flask-cors Flask-Sockets luma.oled adafruit-circuitpython-vl53l0x`. `sudo systemctl enable pigpiod`
+* Install the required dependencies by doing: `sudo apt-get install python3-flask python3-pip python3-rpi.gpio gunicorn3 dos2unix python3-pexpect python3-smbus pigpio python3-pigpio  bluez-tools dnsmasq bridge-utils python3-pil hostapd` then `sudo pip3 install flask-cors Flask-Sockets luma.oled adafruit-circuitpython-vl53l0x`. `sudo systemctl enable pigpiod`
 
 * Copy the contents of the `server` directory into /home/pi/quickpi/ in the Raspberry Pi using scp. This is a flask webapp that will run the programs in the Raspberry Pi.
 
@@ -92,6 +87,8 @@ ln -s /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf
 ```
 mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
 ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
+
+denyinterfaces ap0
 ```
 
 * Add the following to the bottom of /etc/dhcpcd.conf.template
@@ -105,6 +102,7 @@ static ip_address=192.168.233.1
 
 ```
 interface=usb0
+interface=ap0
 dhcp-range=192.168.233.10,192.168.233.20,24h
 dhcp-option=3
 dhcp-option=6
