@@ -44,16 +44,7 @@ First run all of the above steps then:
 * Add the following command to /etc/rc.local:
 
 ```
-/usr/bin/python3 /root/displaylogo.py
-
-su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
-su pi -c "/home/pi/quickpi/install.sh run" &
-
-pigs m 18 5
-pigs m 19 5
-
-/etc/ping.sh &
-/etc/startbluetooth.sh &
+/home/pi/quickpi/scripts/start.sh &
 ```
 
 * Edit the file /lib/systemd/system/raspberrypi-net-mods.service so it look like this:
