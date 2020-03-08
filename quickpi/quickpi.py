@@ -3,6 +3,8 @@ from flask import request
 from flask import Response
 from flask_cors import CORS
 from flask_sockets import Sockets
+from flask import render_template
+from flask import send_from_directory
 import os
 import gevent
 import json
@@ -10,6 +12,8 @@ import time
 import pexpect
 import picleanup
 import boards
+import subprocess
+import os
 
 app = Flask(__name__)
 CORS(app)
@@ -152,9 +156,9 @@ def command_socket(ws):
 				os.system("./install.sh clean &")
 				clean_install = False
 
+			startNewProcess = False
 			# Only reload the python process if we changed the python library
 			# or weren't in command mode previously
-			startNewProcess = False
 			if (not command_mode) or (command_mode_library != messageJson["library"] or longCommand):
 				print("Changed library");
 				if c is not None:
@@ -287,6 +291,113 @@ def command_socket(ws):
 	if c is not None:
 		c.terminate()
 		os.system("python3 cleanup.py")
+
+
+
+@app.route('/log/<path:path>')
+def syslog(path):
+	output = ""
+	if path == "syslog":
+		process = subprocess.Popen(["logread"], stdout=subprocess.PIPE)
+		(output, err) = process.communicate()
+	elif path == "dmesg":
+		process = subprocess.Popen(["dmesg"], stdout=subprocess.PIPE)
+		(output, err) = process.communicate()
+	elif path == "journalctl":
+		process = subprocess.Popen(["journalctl"], stdout=subprocess.PIPE)
+		(output, err) = process.communicate()
+
+
+	return output
+
+@app.route('/wifinetworks.json')
+def wifi_networks():
+	process = subprocess.Popen(["bash", "-c", "sudo iwlist wlan0 scan|grep ESSID| cut -d \":\" -f 2"], stdout=subprocess.PIPE)
+	(output, err) = process.communicate()
+
+	x = output.decode("ascii").replace('"', '')
+	parts = x.split()
+
+	parts = list(dict.fromkeys(parts))
+
+	return json.dumps(parts)
+
+def load_settings():
+	settings = {}
+	with open("/boot/quickpi.txt") as quickpiconfigfile:
+		for line in quickpiconfigfile:
+			if line[0] == '#':
+				continue
+
+			name, value = line.partition("=")[::2]
+			name = name.strip()
+			value = value.strip()
+			if not name:
+				continue
+			settings[name] = value
+
+	return settings
+
+@app.route('/getsettings.json')
+def getsettings():
+	settings = load_settings()
+
+	return json.dumps(settings)
+
+
+@app.route('/savesettings', methods = ['POST'])
+def savesettings():
+	settings = load_settings()
+	json = request.get_json()
+
+	print(json)
+
+	staticnetwork = "0"
+	bluetoothenabled = "0"
+	if json["isstaticip"]:
+		staticnetwork = "1"
+
+	if json["isbluetoothenabled"]:
+		bluetoothenabled = "1"
+
+	os.system("sudo mount /boot -o rw,remount")
+	f = open("/boot/quickpi.txt", "w")
+
+	f.write("SSID=" + json["ssid"] + "\r\n")
+
+	if not json["password"].strip():
+		print(".....")
+		f.write("PASSWORD=" + settings["PASSWORD"] + "\r\n")
+	else:
+		print("----")
+		f.write("PASSWORD=" + json["password"] + "\r\n")
+
+	f.write("STATICNETWORK=" + staticnetwork + "\r\n")
+	f.write("STATICIPADDR=" + json["ip"] + "\r\n")
+	f.write("STATICIPADDR=" + json["sn"] + "\r\n")
+	f.write("STATICGATEWAY=" + json["gw"] + "\r\n")
+	f.write("STATICDNS=" + json["ns"] + "\r\n")
+	f.write("ENABLEBLUETOOTH=" + bluetoothenabled + "\r\n")
+	f.write("NAME=" + json["qname"] + "\r\n")
+	f.write("SCHOOL=" + json["school"] + "\r\n")
+
+	f.close()
+
+	os.system("sudo mount /boot -o ro,remount")
+
+	print (request.get_json())
+	return "OK"
+
+
+@app.route('/static/<path:path>')
+def send_statuc(path):
+	return send_from_directory('static', path)
+
+
+@app.route('/')
+def index():
+	return send_from_directory('.', "index.html")
+
 
 
 if __name__ == '__main__':

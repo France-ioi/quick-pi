@@ -27,4 +27,4 @@ static routers=$STATICGATEWAY
 static domain_name_servers=$STATICDNS" >> /tmp/dhcpcd.conf
 fi
 
-/bin/systemctl daemon-reload
+/sbin/dhcpcd -n
