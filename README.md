@@ -78,10 +78,6 @@ ln -s /tmp/wpa_supplicant.conf /etc/wpa_supplicant/wpa_supplicant.conf
 ```
 mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
 ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
-
-denyinterfaces ap0
-interface ap0
-nohook wpa_supplicant
 ```
 
 * Add the following to the bottom of /etc/dhcpcd.conf.template
@@ -89,6 +85,11 @@ nohook wpa_supplicant
 ```
 interface usb0
 static ip_address=192.168.233.1
+
+denyinterfaces ap0
+interface ap0
+nohook wpa_supplicant
+
 ```
 
 * Edit /etc/dnsmasq.conf so that this is the entiere contents:
