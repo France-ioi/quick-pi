@@ -97,9 +97,9 @@ nohook wpa_supplicant
 ```
 interface=usb0
 interface=ap0
-dhcp-range=192.168.233.10,192.168.233.20,24h
-dhcp-option=3
-dhcp-option=6
+dhcp-range=192.168.233.10,192.168.233.230,2h
+dhcp-option=usb0,3
+dhcp-option=usb0,6
 ```
 
 * Delete /var/lib/ and link it to /tmp
