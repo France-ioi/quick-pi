@@ -103,6 +103,14 @@ dhcp-option=usb0,6
 address=/#/192.168.233.3
 ```
 
+* Edit /etc/default/dnsmasq to add at the bottom:
+
+```
+DNSMASQ_EXCEPT=lo
+```
+
+
+
 * Delete /var/lib/ and link it to /tmp
 ```
 rm -rf /var/lib/misc
