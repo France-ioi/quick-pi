@@ -372,7 +372,8 @@ def savesettings():
 		useproxyuser = "1"
 
 	os.system("sudo mount /boot -o rw,remount")
-	f = open("/boot/quickpi.txt", "w")
+	os.system("rm -f /tmp/temp-quickpi.txt")
+	f = open("/tmp/temp-quickpi.txt", "w")
 
 	f.write("SSID=" + json["ssid"] + "\r\n")
 
@@ -385,15 +386,15 @@ def savesettings():
 
 	f.write("STATICNETWORK=" + staticnetwork + "\r\n")
 	f.write("STATICIPADDR=" + json["ip"] + "\r\n")
-	f.write("STATICIPADDR=" + json["sn"] + "\r\n")
+	f.write("STATICMASK=" + json["sn"] + "\r\n")
 	f.write("STATICGATEWAY=" + json["gw"] + "\r\n")
 	f.write("STATICDNS=" + json["ns"] + "\r\n")
 	f.write("ENABLEBLUETOOTH=" + bluetoothenabled + "\r\n")
 	f.write("NAME=" + json["qname"] + "\r\n")
 	f.write("SCHOOL=" + json["school"] + "\r\n")
 
-	f.write("USEPROXY" + useproxy + "\r\n")
-	f.write("USEPROXYUSER" + useproxyuser + "\r\n")
+	f.write("USEPROXY=" + useproxy + "\r\n")
+	f.write("USEPROXYUSER=" + useproxyuser + "\r\n")
 	f.write("PROXYADDRESS=" + json["proxyaddress"] + "\r\n")
 	f.write("PROXYPORT=" + json["proxyport"] + "\r\n")
 	f.write("PROXYUSER=" + json["proxyuser"] + "\r\n")
@@ -405,6 +406,7 @@ def savesettings():
 
 	f.close()
 
+	os.system("sudo cp -f /tmp/temp-quickpi.txt /boot/quickpi.txt")
 	os.system("sudo mount /boot -o ro,remount")
 
 	print (request.get_json())
@@ -426,7 +428,7 @@ def index():
 @app.route('/<path:path>')
 def catch_all(path):	
 	print("Trying to access ", path)
-	return redirect("http://192.168.233.2/")
+	return redirect("http://192.168.233.3/")
 
 
 if __name__ == '__main__':

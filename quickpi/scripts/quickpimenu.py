@@ -134,6 +134,11 @@ def waitForButton(buttons, wait=True):
 				return button
 		keepgoing = wait
 		time.sleep(0.05)
+		if os.path.isfile("/tmp/time-connection"):
+			draw.rectangle((0, 0, screenwidth - 1, screenheight - 1), outline=0, fill=0)
+			device.display(oledimage)
+			exit(0)
+
 
 def getCommandOutput(cmd):
 	process = subprocess.Popen(cmd, stdout=subprocess.PIPE)

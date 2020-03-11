@@ -100,6 +100,7 @@ interface=ap0
 dhcp-range=192.168.233.10,192.168.233.230,2h
 dhcp-option=usb0,3
 dhcp-option=usb0,6
+address=/#/192.168.233.3
 ```
 
 * Delete /var/lib/ and link it to /tmp

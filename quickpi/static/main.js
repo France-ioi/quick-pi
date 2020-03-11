@@ -80,7 +80,10 @@ function save()
 		body: JSON.stringify(data)
 	})
 	.then((response) => {
-		alert("Settings saved");
+		if (response.status == 200)
+			alert("Settings saved");
+		else
+			alert("Error saving settings");
 	})
 	.catch((error) => {
 		alert("Error saving settings");
@@ -160,7 +163,7 @@ function initialize()
 	        document.getElementById('staticip').checked = myJson.STATICNETWORK == "1" ? true : false;
 	        document.getElementById('ip').value = myJson.STATICIPADDR;
 
-	        document.getElementById('sn').value = myJson.STATICSUBNET;
+	        document.getElementById('sn').value = myJson.STATICMASK;
 
 	        document.getElementById('gw').value = myJson.STATICGATEWAY;
 	        document.getElementById('ns').value = myJson.STATICDNS;
