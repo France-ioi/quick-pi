@@ -124,15 +124,6 @@ rm -rf /var/lib/misc
 ln -s /tmp /var/lib/misc 
 ```
 
-* Copy the scripts in scripts/ to /etc and give them execution permisions:
-
-```
-chmod +x /etc/setupwifi.sh
-chmod +x /etc/ping.sh
-chmod +x /etc/startbluetooth.sh
-chmod +x /etc/showtext.sh
-```
-
 * Create a dummy quickpi.txt file in /boot with the following contents:
 
 ```
