@@ -1,3 +1,4 @@
+#new
 from flask import Flask
 from flask import request
 from flask import Response
@@ -5,6 +6,7 @@ from flask_cors import CORS
 from flask_sockets import Sockets
 from flask import render_template
 from flask import send_from_directory
+from flask import redirect
 import os
 import gevent
 import json
@@ -312,7 +314,7 @@ def syslog(path):
 
 @app.route('/wifinetworks.json')
 def wifi_networks():
-	process = subprocess.Popen(["bash", "-c", "sudo iwlist wlan0 scan|grep ESSID| cut -d \":\" -f 2"], stdout=subprocess.PIPE)
+	process = subprocess.Popen(["bash", "-c", "sudo iwlist scan|grep ESSID| cut -d \":\" -f 2"], stdout=subprocess.PIPE)
 	(output, err) = process.communicate()
 
 	x = output.decode("ascii").replace('"', '')
@@ -354,11 +356,20 @@ def savesettings():
 
 	staticnetwork = "0"
 	bluetoothenabled = "0"
+	useproxy = "0"
+	useproxyuser = "0"
+
 	if json["isstaticip"]:
 		staticnetwork = "1"
 
 	if json["isbluetoothenabled"]:
 		bluetoothenabled = "1"
+
+	if json["useproxy"]:
+		useproxy = "1"
+
+	if json["useproxyuser"]:
+		useproxyuser = "1"
 
 	os.system("sudo mount /boot -o rw,remount")
 	f = open("/boot/quickpi.txt", "w")
@@ -381,6 +392,17 @@ def savesettings():
 	f.write("NAME=" + json["qname"] + "\r\n")
 	f.write("SCHOOL=" + json["school"] + "\r\n")
 
+	f.write("USEPROXY" + useproxy + "\r\n")
+	f.write("USEPROXYUSER" + useproxyuser + "\r\n")
+	f.write("PROXYADDRESS=" + json["proxyaddress"] + "\r\n")
+	f.write("PROXYPORT=" + json["proxyport"] + "\r\n")
+	f.write("PROXYUSER=" + json["proxyuser"] + "\r\n")
+
+	if not json["proxypassword"].strip():
+		f.write("PROXYPASSWORD=" + settings["PROXYPASSWORD"] + "\r\n")
+	else:
+		f.write("PROXYPASSWORD=" + json["proxypassword"] + "\r\n")
+
 	f.close()
 
 	os.system("sudo mount /boot -o ro,remount")
@@ -398,6 +420,13 @@ def send_statuc(path):
 def index():
 	return send_from_directory('.', "index.html")
 
+
+
+@app.route('/', defaults={'path': ''})
+@app.route('/<path:path>')
+def catch_all(path):	
+	print("Trying to access ", path)
+	return redirect("http://192.168.233.2/")
 
 
 if __name__ == '__main__':

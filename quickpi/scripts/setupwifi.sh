@@ -28,3 +28,23 @@ static domain_name_servers=$STATICDNS" >> /tmp/dhcpcd.conf
 fi
 
 /sbin/dhcpcd -n
+
+
+if [ $USEPROXY -eq "1" ]; then
+
+	if [ $USEPROXYUSER -eq "1" ]; then
+		echo "http_proxy=http://$PROXYUSER:$PROXYPASSWORD@$PROXYADDRESS:$PROXYPORT/
+https_proxy=https://$PROXYUSER:$PROXYPASSWORD@$PROXYADDRESS:$PROXYPORT/
+export http_proxy
+export https_proxy
+" > /tmp/proxy.sh 
+	else
+echo "http_proxy=http://$PROXYADDRESS:$PROXYPORT/
+https_proxy=https://$PROXYADDRESS:$PROXYPORT/
+export http_proxy
+export https_proxy
+" > /tmp/proxy.sh
+
+	fi
+fi
+

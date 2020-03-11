@@ -33,6 +33,16 @@ function save()
 	var school = document.getElementById('school').value;
 	var qname = document.getElementById('qname').value;
 
+	var useproxy = document.getElementById('useproxy').checked;
+	var useproxyuser = document.getElementById('useproxyuser').checked;
+
+	var proxyaddress = document.getElementById('proxyaddress').value;
+	var proxyport = document.getElementById('proxyport').value;
+	var proxyuser = document.getElementById('proxyuser').value;
+	var proxypassword = document.getElementById('proxypassword').value;
+
+
+
 	var ssid = "";
 	if (is_ssid_combo)
 	{
@@ -53,7 +63,13 @@ function save()
 		password: password,
 		isbluetoothenabled : isbluetoothenabled,
 		school: school,
-		qname: qname
+		qname: qname,
+		useproxy: useproxy,
+		useproxyuser: useproxyuser,
+		proxyaddress: proxyaddress,
+		proxyport: proxyport,
+		proxyuser: proxyuser,
+		proxypassword: proxypassword
 	};
 
 	fetch('savesettings', {
@@ -152,6 +168,17 @@ function initialize()
 
         	document.getElementById('school').value = myJson.SCHOOL;
 	        document.getElementById('qname').value = myJson.NAME;
+
+		document.getElementById('useproxy').checked = myJson.USEPROXY == "1" ? true : false;
+		document.getElementById('useproxyuser').checked = myJson.USEPROXYUSER == "1" ? true : false;
+
+		document.getElementById('proxyaddress').value = myJson.PROXYADDRESS;
+		document.getElementById('proxyport').value = myJson.PROXYPORT;
+		document.getElementById('proxyuser').value = myJson.PROXYUSER;
+		//document.getElementById('proxypass').value = myJson.;
+
+
+
 
             });
 
