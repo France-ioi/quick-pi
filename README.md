@@ -80,6 +80,13 @@ mv /etc/dhcpcd.conf /etc/dhcpcd.conf.template
 ln -s /tmp/dhcpcd.conf /etc/dhcpcd.conf
 ```
 
+Same with hostapd config file:
+
+```
+rm -f /etc/hostapd/hostapd.conf 
+ln -s /etc/hostapd/hostapd.conf /tmp/hostapd.conf
+```
+
 * Add the following to the bottom of /etc/dhcpcd.conf.template
 
 ```
