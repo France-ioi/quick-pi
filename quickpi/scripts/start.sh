@@ -1,3 +1,7 @@
+service ntp stop
+/usr/lib/ntp/ntp-systemd-wrapper
+
+
 cd /home/pi/quickpi
 su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
 su pi -c "/home/pi/quickpi/install.sh run" &

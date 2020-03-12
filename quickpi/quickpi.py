@@ -398,6 +398,7 @@ def savesettings():
 	f.write("PROXYADDRESS=" + json["proxyaddress"] + "\r\n")
 	f.write("PROXYPORT=" + json["proxyport"] + "\r\n")
 	f.write("PROXYUSER=" + json["proxyuser"] + "\r\n")
+	f.write("HIDEAPPASSWORD=1\r\n")
 
 	if not json["proxypassword"].strip():
 		f.write("PROXYPASSWORD=" + settings["PROXYPASSWORD"] + "\r\n")

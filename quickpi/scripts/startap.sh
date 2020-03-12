@@ -12,6 +12,24 @@ if [ "$1" = "station" ]; then
 
 	sudo systemctl start dhcpcd
 else
+echo "
+interface=ap0
+driver=nl80211
+ssid=QuickPi
+hw_mode=g
+channel=7
+wmm_enabled=0
+macaddr_acl=0
+auth_algs=1
+ignore_broadcast_ssid=0
+wpa=2
+wpa_passphrase=France-ioi
+wpa_key_mgmt=WPA-PSK
+wpa_pairwise=TKIP
+rsn_pairwise=CCMP
+" > /tmp/hostapd.conf
+
+
 	sudo wpa_cli disable_network 0
 	sudo systemctl stop dhcpcd
 	sudo ip link set wlan0 down

@@ -96,8 +96,8 @@ def drawMenu(topLabel, mainLabel, arrows):
 
 	draw.text((0, 0), topLabel, font=oledfont, fill=255)
 
-
 	draw.text((10, 18), mainLabel, font=oledfont, fill=255)
+
 
 	if arrows:
 		draw.polygon([(117, 13), (127, 13), (122,2)], fill=255)
@@ -218,7 +218,20 @@ while True:
 #			currentMenu = None
 
 			if menuoption == STARTAPMODE:
-				drawMenu("Connect to network", "QuickPi", False)
+				settings = load_settings()
+				showPassword = True
+				try:
+					if settings["HIDEAPPASSWORD"] == "1":
+						showPassword = False
+				except:
+					pass
+
+				if showPassword:
+					drawMenu("Connect to: QuickPi", "pass: France-ioi", False)
+				else:
+					drawMenu("Connect to:", "QuickPi", False)
+
+
 				os.system("/home/pi/quickpi/scripts/startap.sh ap &")
 
 				while True:
