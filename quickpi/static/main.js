@@ -82,10 +82,17 @@ function save()
 		body: JSON.stringify(data)
 	})
 	.then((response) => {
-		if (response.status == 200)
-			alert("Settings saved");
+		if (response.status == 200) {
+			if (confirm("Settings saved. You have to reboot for them to take effect. Reboot now?")) {
+				fetch('reboot', {
+			                method: 'POST',
+		                });
+			}
+		}
 		else
+		{
 			alert("Error saving settings");
+		}
 	})
 	.catch((error) => {
 		alert("Error saving settings");

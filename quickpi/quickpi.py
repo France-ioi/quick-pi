@@ -260,7 +260,14 @@ def command_socket(ws):
 			longCommand = None
 			command_mode = False
 		elif messageJson["command"] == "close":
-			os.remove("/tmp/lock")
+			try:
+				os.remove("/tmp/lock")
+			except:
+				pass
+
+			message = { "command": "closed" }
+			ws.send(json.dumps(message))
+
 			break
 		elif messageJson["command"] == "install":
 			if clean_install:
@@ -346,6 +353,10 @@ def getsettings():
 
 	return json.dumps(settings)
 
+
+@app.route('/reboot', methods = ['POST'])
+def reboot():
+        os.system("sudo reboot");
 
 @app.route('/savesettings', methods = ['POST'])
 def savesettings():
