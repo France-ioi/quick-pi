@@ -358,6 +358,7 @@ def savesettings():
 	bluetoothenabled = "0"
 	useproxy = "0"
 	useproxyuser = "0"
+	disabletunnel = "0"
 
 	if json["isstaticip"]:
 		staticnetwork = "1"
@@ -370,6 +371,9 @@ def savesettings():
 
 	if json["useproxyuser"]:
 		useproxyuser = "1"
+
+	if  json["disabletunnel"]:
+		disabletunnel = "1"
 
 	os.system("sudo mount /boot -o rw,remount")
 	os.system("rm -f /tmp/temp-quickpi.txt")
@@ -399,6 +403,7 @@ def savesettings():
 	f.write("PROXYPORT=" + json["proxyport"] + "\r\n")
 	f.write("PROXYUSER=" + json["proxyuser"] + "\r\n")
 	f.write("HIDEAPPASSWORD=1\r\n")
+	f.write("DISABLETUNNEL=" + disabletunnel + "\r\n")
 
 	if not json["proxypassword"].strip():
 		f.write("PROXYPASSWORD=" + settings["PROXYPASSWORD"] + "\r\n")
@@ -427,7 +432,7 @@ def index():
 
 @app.route('/', defaults={'path': ''})
 @app.route('/<path:path>')
-def catch_all(path):	
+def catch_all(path):
 	print("Trying to access ", path)
 	return redirect("http://192.168.233.3/")
 

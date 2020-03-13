@@ -1,4 +1,6 @@
-import asyncio, websockets
+#!/usr/bin/python3
+
+import asyncio, websockets, sys
 
 async def relay_ws(ws_from, ws_to):
     # Relay messages received from a WS to a WS
@@ -36,8 +38,8 @@ async def make_relay(local_uri, remote_uri):
             # Wait for tasks to finish
             await ltr_task
             await rtl_task
-        except:
-            pass
+        except Exception as err:
+            print("error: ", str(err))
 
         print("Cleaning up...")
 
@@ -49,8 +51,11 @@ async def make_relay(local_uri, remote_uri):
         await asyncio.sleep(10)
 
 
-code = "test"
-local_uri = "ws://localhost:5000/api/v1/commands"
-remote_uri = "ws://api.quick-pi.org/server/%s/" % code
+if len(sys.argv) >= 2:
+	code = sys.argv[1]
+	local_uri = "ws://localhost:5000/api/v1/commands"
+	remote_uri = "ws://api.quick-pi.org/server/%s/" % code
 
-asyncio.get_event_loop().run_until_complete(make_relay(local_uri, remote_uri))
+	asyncio.get_event_loop().run_until_complete(make_relay(local_uri, remote_uri))
+else:
+	print("Provide the code name as a parameter")

@@ -40,6 +40,7 @@ function save()
 	var proxyport = document.getElementById('proxyport').value;
 	var proxyuser = document.getElementById('proxyuser').value;
 	var proxypassword = document.getElementById('proxypassword').value;
+	var disabletunnel = document.getElementById('disabletunnel').checked ? false: true;
 
 
 
@@ -69,7 +70,8 @@ function save()
 		proxyaddress: proxyaddress,
 		proxyport: proxyport,
 		proxyuser: proxyuser,
-		proxypassword: proxypassword
+		proxypassword: proxypassword,
+		disabletunnel: disabletunnel
 	};
 
 	fetch('savesettings', {
@@ -178,6 +180,13 @@ function initialize()
 		document.getElementById('proxyaddress').value = myJson.PROXYADDRESS;
 		document.getElementById('proxyport').value = myJson.PROXYPORT;
 		document.getElementById('proxyuser').value = myJson.PROXYUSER;
+
+		if (typeof(myJson.DISABLETUNNEL) !== "undefined")
+			document.getElementById('disabletunnel').checked = myJson.DISABLETUNNEL == "0" ? true : false;
+		else
+			document.getElementById('disabletunnel').checked = true;
+
+
 		//document.getElementById('proxypass').value = myJson.;
 
 
