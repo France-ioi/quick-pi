@@ -51,8 +51,7 @@ main_menu = [
 			[ {"menu" : "Start Access Point mode" , "id" : STARTAPMODE },
 			  {"menu" : "Show school and name", "id" : SHOWSCHOOL },
 			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS } ]},
-              { "menu" :  "Check for updates", "submenu" :
-                        [ {"menu" : "Check Now", "id" :  RUNAUTOUPDATE } ]}
+              { "menu" :  "Check for updates", "id" :  RUNAUTOUPDATE }
 
 ]
 
@@ -63,6 +62,23 @@ GPIO.setup(LEFT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(RIGHT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(CENTER_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(BUTTON2_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+def load_settings():
+	settings = {}
+	with open("/boot/quickpi.txt") as quickpiconfigfile:
+		for line in quickpiconfigfile:
+			if line[0] == '#':
+				continue
+
+			name, value = line.partition("=")[::2]
+			name = name.strip()
+			value = value.strip()
+			if not name:
+				continue
+			settings[name] = value
+
+	return settings
+
 
 
 serial = i2c(port=1, address=0x3C)
@@ -76,12 +92,17 @@ oledimage = Image.new('1', (128, 32))
 draw = ImageDraw.Draw(oledimage)
 oledfont = ImageFont.load_default()
 
+settings = load_settings()
+
 
 logo = Image.open("/home/pi/quickpi/scripts/franceio.png").convert("1")
-oledimage.paste(logo, box=(int(64 - (logo.width / 2)), 0))
+oledimage.paste(logo, box=(int(0), 0))
+
+draw.text((60, 0), settings["SCHOOL"], font=oledfont, fill=255)
+draw.text((60, 18), settings["NAME"], font=oledfont, fill=255)
 device.display(oledimage)
 
-time.sleep(3)
+time.sleep(5)
 
 def displayText(line1, line2, line3):
 	draw.rectangle((0, 0, screenwidth - 1, screenheight - 1), outline=0, fill=0)
@@ -146,23 +167,18 @@ def getCommandOutput(cmd):
 
 	return output
 
-def load_settings():
-	settings = {}
-	with open("/boot/quickpi.txt") as quickpiconfigfile:
-		for line in quickpiconfigfile:
-			if line[0] == '#':
-				continue
 
-			name, value = line.partition("=")[::2]
-			name = name.strip()
-			value = value.strip()
-			if not name:
-				continue
-			settings[name] = value
+if settings["SCHOOL"] == "schoolkey" and settings["NAME"] == "quickpi1":
+	drawMenu("Use Access Point or USB", "to configure this board", False)
+	
+	draw.rectangle((0, 0, screenwidth - 1, screenheight - 1), outline=0, fill=0)
+	draw.text((0, 0),  "Use access Point or", font=oledfont, fill=255)
+	draw.text((0, 10), "USB to configure this", font=oledfont, fill=255)
+	draw.text((0, 20), "board. Press button.", font=oledfont, fill=255)
 
-	return settings
+	device.display(oledimage)
 
-
+	waitForButton([UP_PIN, DOWN_PIN, LEFT_PIN, BUTTON2_PIN])
 
 currentMenuPos = 0
 currentMenu = main_menu
@@ -265,7 +281,27 @@ while True:
 
 
 			elif menuoption == RUNAUTOUPDATE:
-				drawMenu("Auto update", "Checking ...", False)
+				file = open('/home/pi/quickpi/version',mode='r')
+				currentversion = file.read()
+				file.close()
+
+				drawMenu("Current version: " + str(currentversion), "Press to check", False)
+				time.sleep(0.1)
+
+				keepgoing = False
+				while True:
+					pressed = waitForButton([LEFT_PIN, BUTTON2_PIN], False)
+					if pressed == LEFT_PIN:
+						keepgoing = False
+						break
+					elif pressed == BUTTON2_PIN:
+						keepgoing = True
+						break
+
+				if not keepgoing:
+					continue
+
+				drawMenu("Auto Update: " + str(currentversion), "Checking ...", False)
 				time.sleep(1)
 
 				try:
@@ -284,10 +320,6 @@ while True:
 
 				file = open('/tmp/version',mode='r')
 				newversion = file.read()
-				file.close()
-
-				file = open('/home/pi/quickpi/version',mode='r')
-				currentversion = file.read()
 				file.close()
 
 				newversion = int(newversion.strip())

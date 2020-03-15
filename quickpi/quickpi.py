@@ -358,6 +358,9 @@ def getsettings():
 def reboot():
         os.system("sudo reboot");
 
+def removewhitespace(inputstring):
+	return ''.join(inputstring.split())
+
 @app.route('/savesettings', methods = ['POST'])
 def savesettings():
 	settings = load_settings()
@@ -397,29 +400,29 @@ def savesettings():
 		f.write("PASSWORD=" + settings["PASSWORD"] + "\r\n")
 	else:
 		print("----")
-		f.write("PASSWORD=" + json["password"] + "\r\n")
+		f.write("PASSWORD=" + removewhitespace(json["password"]) + "\r\n")
 
 	f.write("STATICNETWORK=" + staticnetwork + "\r\n")
-	f.write("STATICIPADDR=" + json["ip"] + "\r\n")
-	f.write("STATICMASK=" + json["sn"] + "\r\n")
-	f.write("STATICGATEWAY=" + json["gw"] + "\r\n")
-	f.write("STATICDNS=" + json["ns"] + "\r\n")
+	f.write("STATICIPADDR=" + removewhitespace(json["ip"]) + "\r\n")
+	f.write("STATICMASK=" + removewhitespace(json["sn"]) + "\r\n")
+	f.write("STATICGATEWAY=" + removewhitespace(json["gw"]) + "\r\n")
+	f.write("STATICDNS=" + removewhitespace(json["ns"]) + "\r\n")
 	f.write("ENABLEBLUETOOTH=" + bluetoothenabled + "\r\n")
-	f.write("NAME=" + json["qname"] + "\r\n")
-	f.write("SCHOOL=" + json["school"] + "\r\n")
+	f.write("NAME=" + removewhitespace(json["qname"]) + "\r\n")
+	f.write("SCHOOL=" + removewhitespace(json["school"]) + "\r\n")
 
 	f.write("USEPROXY=" + useproxy + "\r\n")
 	f.write("USEPROXYUSER=" + useproxyuser + "\r\n")
-	f.write("PROXYADDRESS=" + json["proxyaddress"] + "\r\n")
-	f.write("PROXYPORT=" + json["proxyport"] + "\r\n")
-	f.write("PROXYUSER=" + json["proxyuser"] + "\r\n")
+	f.write("PROXYADDRESS=" + removewhitespace(json["proxyaddress"]) + "\r\n")
+	f.write("PROXYPORT=" + removewhitespace(json["proxyport"]) + "\r\n")
+	f.write("PROXYUSER=" + removewhitespace(json["proxyuser"]) + "\r\n")
 	f.write("HIDEAPPASSWORD=1\r\n")
 	f.write("DISABLETUNNEL=" + disabletunnel + "\r\n")
 
 	if not json["proxypassword"].strip():
 		f.write("PROXYPASSWORD=" + settings["PROXYPASSWORD"] + "\r\n")
 	else:
-		f.write("PROXYPASSWORD=" + json["proxypassword"] + "\r\n")
+		f.write("PROXYPASSWORD=" + removewhitespace(json["proxypassword"]) + "\r\n")
 
 	f.close()
 
