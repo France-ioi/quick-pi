@@ -8,7 +8,12 @@ source /tmp/quickpi.txt
 
 cd /home/pi/quickpi
 su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
-su pi -c "/home/pi/quickpi/install.sh run" &
+
+if [ -f "/mnt/data/installedprogram.py" ]; then
+	su pi -c "/home/pi/quickpi/install.sh run" &
+else
+	/usr/bin/python3 /home/pi/quickpi/scripts/quickpimenu.py &
+fi
 
 su - pi -c "/home/pi/quickpi/scripts/ping.sh &"
 
@@ -24,8 +29,6 @@ iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 5000
 
 iptables -t nat -A PREROUTING -i ap0 -p tcp --dport 80 -j REDIRECT --to-port 5000
 iptables -t nat -A PREROUTING -i ap0 -p tcp --dport 443 -j REDIRECT --to-port 5000
-
-/usr/bin/python3 /home/pi/quickpi/scripts/quickpimenu.py &
 
 TUNNELCODE="$SCHOOL-$NAME"
 
