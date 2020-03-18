@@ -40,6 +40,8 @@ SHOWIPADDRESS = 7
 
 RUNAUTOUPDATE = 8
 
+RUNBOARDTEST = 9
+
 main_menu = [ 
 ##	      { "menu" :  "Auto Test", "submenu" : 
 #			[ {"menu" : "Run", "id" :  RUNAUTOTEST } ]},
@@ -51,7 +53,9 @@ main_menu = [
 			[ {"menu" : "Start Access Point mode" , "id" : STARTAPMODE },
 			  {"menu" : "Show school and name", "id" : SHOWSCHOOL },
 			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS } ]},
-              { "menu" :  "Check for updates", "id" :  RUNAUTOUPDATE }
+              { "menu" :  "Check for updates", "id" :  RUNAUTOUPDATE },
+              { "menu" :  "Board test", "submenu": 
+			[ { "menu" : "Press to run", "id" :  RUNBOARDTEST } ] }
 
 ]
 
@@ -279,6 +283,10 @@ while True:
 					if pressed == LEFT_PIN:
 						break
 
+			elif menuoption == RUNBOARDTEST:
+				os.system("python3 /home/pi/quickpi/testsuite/fulltest.py")
+
+				waitForButton([UP_PIN, DOWN_PIN, LEFT_PIN, BUTTON2_PIN])
 
 			elif menuoption == RUNAUTOUPDATE:
 				file = open('/home/pi/quickpi/version',mode='r')

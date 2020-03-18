@@ -407,17 +407,18 @@ try:
 
 	if result[0]:
 		print("BOARD PASSED ALL TEST")
-		displayTextOled("PASS " + b + a)
+#		displayTextOled("PASSED " + b + a)
+		displayTextOled("ALL TEST PASSED")
 		boardstatus = "BOARD OK"
-		os.system("echo " + str(result[1]) + " > /mnt/data/" + a + b)
+		#os.system("echo " + str(result[1]) + " > /mnt/data/" + a + b)
 
 	else:
 		print("BOARD failed ", result[1])
 		displayTextOled("FAIL", result[1])
 		boardstatus = "FAIL"
-		os.system("echo " + str(result[1]) + " > /mnt/data/" + a + b + "failed")
+		#os.system("echo " + str(result[1]) + " > /mnt/data/" + a + b + "failed")
 
-	waitForBoardRemoved(boardstatus + " " + a + b)
+	#waitForBoardRemoved(boardstatus + " " + a + b)
 
 except Exception as e:
 	displayTextOled("FAIL")
