@@ -30,7 +30,8 @@ iptables -t nat -A PREROUTING -i ap0 -p tcp --dport 443 -j REDIRECT --to-port 50
 TUNNELCODE="$SCHOOL-$NAME"
 
 if [ $TUNNELCODE != "schoolkey-quickpi1" ] && [ $DISABLETUNNEL == "0" ]; then
-	/usr/bin/python3 /home/pi/quickpi/scripts/qt-client.py "$TUNNELCODE" &
+
+	su - pi -c "/usr/bin/python3 /home/pi/quickpi/scripts/qt-client.py $TUNNELCODE &"
 fi
 
 exit 0
