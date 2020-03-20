@@ -182,7 +182,7 @@ def curlErrorToString(result):
 	elif result == 6:
 		return "Couldn't resolve host"
 	elif result == 7:
-		return ""Couldn't connect to host"
+		return "Couldn't connect to host"
 	elif result == 9:
 		return "Access defined"
 	elif result == 22:
