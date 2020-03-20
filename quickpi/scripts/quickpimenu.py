@@ -42,6 +42,8 @@ RUNAUTOUPDATE = 8
 
 RUNBOARDTEST = 9
 
+ABOUTQUICKPI = 10
+
 main_menu = [ 
 ##	      { "menu" :  "Auto Test", "submenu" : 
 #			[ {"menu" : "Run", "id" :  RUNAUTOTEST } ]},
@@ -55,7 +57,8 @@ main_menu = [
 			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS } ]},
               { "menu" :  "Check for updates", "id" :  RUNAUTOUPDATE },
               { "menu" :  "Board test", "submenu": 
-			[ { "menu" : "Press to run", "id" :  RUNBOARDTEST } ] }
+			[ { "menu" : "Press to run", "id" :  RUNBOARDTEST } ] },
+              { "menu" : "About QuickPi", "id": ABOUTQUICKPI }
 
 ]
 
@@ -171,6 +174,28 @@ def getCommandOutput(cmd):
 
 	return output
 
+def curlErrorToString(result):
+	if result == 3:
+		return "Url malformat"
+	elif result == 5:
+		return "Couldn't resolve proxy"
+	elif result == 6:
+		return "Couldn't resolve host"
+	elif result == 7:
+		return ""Couldn't connect to host"
+	elif result == 9:
+		return "Access defined"
+	elif result == 22:
+		return "HTTP returned error"
+	elif result == 35:
+		return "TLS error"
+	elif result == 48:
+		return "Can't verify host"
+	elif result == 60:
+		return "Peer certificate cannot be authenticated"
+
+	return str(result)
+
 
 if settings["SCHOOL"] == "schoolkey" and settings["NAME"] == "quickpi1":
 	drawMenu("Use Access Point or USB", "to configure this board", False)
@@ -246,10 +271,13 @@ while True:
 				except:
 					pass
 
+
+				wifiname = "QP-" + settings["NAME"]
+
 				if showPassword:
-					drawMenu("Connect to: QuickPi", "pass: France-ioi", False)
+					drawMenu("Connect to: " + wifiname, "pass: France-ioi", False)
 				else:
-					drawMenu("Connect to:", "QuickPi", False)
+					drawMenu("Connect to:", wifiname, False)
 
 
 				os.system("/home/pi/quickpi/scripts/startap.sh ap &")
@@ -276,12 +304,43 @@ while True:
 
 
 			elif menuoption == SHOWIPADDRESS:
-				ipaddress = getCommandOutput(["hostname", "-I"]).decode("ascii").strip()
-				drawMenu("IP Address", ipaddress, False)
+				ethipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "eth0"]).decode("ascii").strip()
+				usbipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "usb0"]).decode("ascii").strip()
+				wlanipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "wlan0"]).decode("ascii").strip()
+				btipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "pan0"]).decode("ascii").strip()
+
+				ipaddresses = []
+				if ethipaddress:
+					ipaddresses.append(["Cable", ethipaddress])
+
+				if usbipaddress:
+					ipaddresses.append(["USB", usbipaddress])
+
+				if wlanipaddress:
+					ipaddresses.append(["WIFI", wlanipaddress])
+
+				if btipaddress:
+					ipaddresses.append(["BT", btipaddress])
+
+				ipindex = 0
+				morethanone = len(ipaddresses) > 0
+
+				drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
 				while True:
-					pressed = waitForButton([LEFT_PIN], False)
+					pressed = waitForButton([LEFT_PIN, UP_PIN, DOWN_PIN], True)
 					if pressed == LEFT_PIN:
 						break
+					elif pressed == UP_PIN:
+						ipindex = ipindex - 1;
+						if ipindex == -1:
+							ipindex = len(ipaddresses) - 1
+					elif pressed == DOWN_PIN:
+						ipindex = ipindex + 1
+						if ipindex == len(ipaddresses):
+							ipindex = 0
+
+					drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
+					time.sleep(0.2)
 
 			elif menuoption == RUNBOARDTEST:
 				os.system("python3 /home/pi/quickpi/testsuite/fulltest.py")
@@ -316,10 +375,11 @@ while True:
 					os.remove("/tmp/version")
 				except:
 					pass
-				result = os.system("curl -f " + UPDATEBASEURL + "version --output /tmp/version")
+				result = os.system("curl -f " + UPDATEBASEURL + "version --output /tmp/version") >> 8
 
 				if result != 0:
-					drawMenu("Auto update", "Failed error " + str(result), False)
+					errorstr = curlErrorToString(result)
+					drawMenu("Auto update failed", errorstr, False)
 					while True:
 						pressed = waitForButton([LEFT_PIN], False)
 						if pressed == LEFT_PIN:
@@ -344,10 +404,10 @@ while True:
 				drawMenu("Auto update", "Downloading " + str(newversion), False)
 				time.sleep(1)
 
-				result = os.system("curl -f " + UPDATEBASEURL + "quickpi.tar.gz --output /tmp/quickpi.tar.gz")
+				result = os.system("curl -f " + UPDATEBASEURL + "quickpi.tar.gz --output /tmp/quickpi.tar.gz") >> 8
 
 				if result != 0:
-					drawMenu("Auto update", "Failed to download update", False)
+					drawMenu("Auto update failed", "Failed to download " + str(result) , False)
 					while True:
 						pressed = waitForButton([LEFT_PIN], False)
 						if pressed == LEFT_PIN:
@@ -375,14 +435,19 @@ while True:
 				result = os.system("/home/pi/quickpi/scripts/afterupdate.sh")
 
 
-				drawMenu("Auto update", "Sucess, restarting...", False)
+				drawMenu("Auto update", "Success, restarting...", False)
 				os.system("sudo reboot")
 				while True:
 					pressed = waitForButton([LEFT_PIN], False)
 					if pressed == LEFT_PIN:
 						break
 					continue
-
+			elif menuoption == ABOUTQUICKPI:
+				drawMenu("By France-ioi", "quick-pi.org", False)
+				while True:
+					pressed = waitForButton([LEFT_PIN], False)
+					if pressed == LEFT_PIN:
+						break
 
 
 
