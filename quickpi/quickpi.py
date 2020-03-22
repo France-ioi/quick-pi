@@ -187,6 +187,7 @@ def command_socket(ws):
 			if startNewProcess:
 				print ("Starting new process")
 				c = pexpect.spawnu('/usr/bin/python3 -i /tmp/quickpi.lib')
+				c.delaybeforesend = None
 				c.expect('>>>')
 
 			command_mode_library = messageJson["library"]
