@@ -66,6 +66,7 @@ def command_socket(ws):
 	command_mode_dirty = False
 	command_mode_library = ""
 	clean_install = True
+	messageArray = None
 
 	print (".")
 	message = ws.receive()
@@ -99,7 +100,9 @@ def command_socket(ws):
 
 	message = { "command": "hello",
 		    "name": quickpiname,
-		    "board": currentboard }
+		    "board": currentboard,
+		    "version": 1 }
+
 	ws.send(json.dumps(message))
 
 
@@ -111,12 +114,15 @@ def command_socket(ws):
 		messageJson = None
 
 		#print("Waiting for first message")
-		with gevent.Timeout(0.5, False):
-			message = ws.receive()
+		if messageArray is not None and len(messageArray) > 0:
+			messageJson = messageArray.pop(0)
+		else:
+			with gevent.Timeout(0.5, False):
+				message = ws.receive()
 
-		if message is not None:
-			messageJson = json.loads(message)
-#			print("Got message " + messageJson["command"])
+			if message is not None:
+				messageJson = json.loads(message)
+	#			print("Got message " + messageJson["command"])
 
 		if messageJson is None:
 			if longCommand is not None:
@@ -149,6 +155,9 @@ def command_socket(ws):
 						  }
 
 					ws.send(json.dumps(message))
+		elif messageJson["command"] == 'transaction':
+			messageArray = messageJson["messages"]
+
 		elif messageJson["command"] == 'ping':
 			message = { "command": "pong" }
 			ws.send(json.dumps(message))
