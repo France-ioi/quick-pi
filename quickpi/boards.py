@@ -34,7 +34,7 @@ def detectBoard():
 	i2cdevices = listi2cDevices()
 
 	if i2cdevices == grove_expected_i2c:
-		return "grove"
+		return "grovepi"
 	elif i2cdevices == quickpi_expected_i2c:
 		return "quickpi"
 	elif len(i2cdevices) == 0:
