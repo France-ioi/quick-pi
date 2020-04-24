@@ -17,6 +17,7 @@
 <div class="tab">
   <button class="tablinks" onclick="openTab(event, 'config')">Configuration</button>
   <button class="tablinks" onclick="openTab(event, 'diagnostics')">Diagnostics</button>
+  <button class="tablinks" onclick="openTab(event, 'update')">Update</button>
 </div>
 
 	<div id="diagnostics" class="tabcontent">
@@ -121,6 +122,17 @@
                    </tr>
 		</table>
 	</div>
+
+	<div id="update" class="tabcontent">
+		<p>
+		<button id="updatebutton" onclick="update_now()">Check for update now</button>
+		</p>
+		<p>
+		<textarea id="update_area" cols="100" rows="30"></textarea>
+		</p>
+
+	</div>
+
 
 	<div>
 		<a href="/static/objets_connectes/testbed/index.html">Go to programming enviroment</a>

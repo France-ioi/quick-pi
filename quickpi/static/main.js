@@ -136,7 +136,7 @@ function get_log(logfile)
 		})
 		.then((data) => {
 
-			textarea = document.getElementById(logfile + "_area");
+			var textarea = document.getElementById(logfile + "_area");
 
 			textarea.value = data;
 		});
@@ -156,6 +156,26 @@ function getlog_dmesg()
 function getlog_journalctl()
 {
 	get_log("journalctl");
+}
+
+function update_now()
+{
+	var textarea = document.getElementById("update_area");
+	var button = document.getElementById("updatebutton");
+
+	var ws = new WebSocket(location.origin.replace(/^http/, 'ws') + "/api/v1/update") 
+
+	ws.onmessage = function(event) {
+		textarea.value += event.data;
+	};
+
+        ws.onclose = function(event) {
+                button.disabled = false;
+        };
+
+	ws.onerror = function(error) {
+		textarea.value += "Error: " + error.message
+	};
 }
 
 function initialize()

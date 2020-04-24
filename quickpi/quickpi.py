@@ -16,6 +16,7 @@ import picleanup
 import boards
 import subprocess
 import os
+import select
 
 app = Flask(__name__)
 CORS(app)
@@ -310,6 +311,24 @@ def command_socket(ws):
 	if c is not None:
 		c.terminate()
 		os.system("python3 cleanup.py")
+
+
+@sockets.route('/api/v1/update')
+def update_socket(ws):
+	process = subprocess.Popen(["/home/pi/quickpi/scripts/update.sh"], stdout=subprocess.PIPE)
+	poll_obj = select.poll()
+	poll_obj.register(process.stdout, select.POLLIN)
+
+	while True:
+		poll_result = poll_obj.poll(10000)
+		if poll_result:
+			output = process.stdout.readline()
+			if output == '' and process.poll() is not None:
+				break
+			if output:
+				ws.send(output.decode("utf-8"))
+		else:
+			break
 
 
 
