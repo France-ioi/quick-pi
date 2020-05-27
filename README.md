@@ -93,7 +93,7 @@ Same with hostapd config file:
 
 ```
 rm -f /etc/hostapd/hostapd.conf 
-ln -s /etc/hostapd/hostapd.conf /tmp/hostapd.conf
+ln -s /tmp/hostapd.conf /etc/hostapd/hostapd.conf
 ```
 
 * Add the following to the bottom of /etc/dhcpcd.conf.template
