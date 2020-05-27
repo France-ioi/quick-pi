@@ -67,7 +67,7 @@ After=systemd-rfkill.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/etc/setupwifi.sh
+ExecStart=/home/pi/quickpi/scripts/setupwifi.sh
 ExecStartPost=/bin/chmod 600 /etc/wpa_supplicant/wpa_supplicant.conf
 ExecStartPost=/usr/sbin/rfkill unblock wifi
 
