@@ -388,7 +388,7 @@ while True:
 
 				keepgoing = True
 				if (not ethipaddress) and (not wlanipaddress):
-					drawMenu("To update connect to wifi: ", "Or use config page", False)
+					drawMenu("Connect to wifi: ", "Or use config page", False)
 
 					while True:
 						pressed = waitForButton([LEFT_PIN], False)
