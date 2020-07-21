@@ -396,9 +396,8 @@ while True:
 						if pressed == LEFT_PIN:
 							keepgoing = False
 							break
-	
 
-				if not keepgoing
+				if not keepgoing:
 					continue
 
 
@@ -442,7 +441,7 @@ while True:
 				newversion = int(newversion.strip())
 				currentversion = int(currentversion.strip())
 
-				if newversion > currentversion:
+				if newversion <= currentversion:
 					drawMenu("Auto update", "Already at " + str(currentversion), False)
 					while True:
 						pressed = waitForButton([LEFT_PIN], False)
