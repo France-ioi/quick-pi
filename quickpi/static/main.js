@@ -182,6 +182,9 @@ function uploadArrayBufferRawImage(url, arraybuffer, progress, done)
 function downloadFile(url, progress, done)
 {
 	var req = new XMLHttpRequest();
+
+	url = url + "?_=" + new Date().getTime();
+
 	req.open("GET", url, true);
 	req.addEventListener("progress", function (evt) {
 		console.log("progress");
