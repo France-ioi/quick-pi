@@ -6,14 +6,24 @@ service ntp stop
 DISABLETUNNEL="0"
 source /tmp/quickpi.txt
 
-cd /home/pi/quickpi
-su pi -c "cd /home/pi/quickpi; gunicorn3 -k flask_sockets.worker -b 0.0.0.0:5000 quickpi:app" &
+/home/pi/quickpi/scripts/runserver.sh
 
 if [ -f "/mnt/data/installedprogram.py" ]; then
-	su pi -c "/home/pi/quickpi/install.sh run" &
+
+	set +e
+	/usr/bin/python3 /home/pi/quickpi/scripts/quickpimenu.py  --asktocancel 8
+
+	if [ "$?" == "0" ]; then
+		su pi -c "/home/pi/quickpi/install.sh run" &
+	else
+		/usr/bin/python3 /home/pi/quickpi/scripts/quickpimenu.py &
+	fi
 else
 	/usr/bin/python3 /home/pi/quickpi/scripts/quickpimenu.py &
 fi
+
+
+/usr/bin/python3 /home/pi/quickpi/scripts/restart.py &
 
 su - pi -c "/home/pi/quickpi/scripts/ping.sh &"
 

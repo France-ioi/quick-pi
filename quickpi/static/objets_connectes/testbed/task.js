@@ -8,8 +8,6 @@ function initTask(subTask) {
             groupByCategory: true,
             generatedBlocks: {
                 quickpi: {
-                    //     ["turnLedOn", "turnLedOff", "buttonState", "waitForButton", "setLedState", "displayText", "readTemperature", "sleep", "buttonState"]
-                    basic: ["turnLedOn", "turnLedOff", "readTemperature", "sleep", "buttonState"],
                     easy: ["setLedState",
                             "waitForButton",
                             "isButtonPressed",
@@ -17,7 +15,6 @@ function initTask(subTask) {
                             "setServoAngle",
                             "readTemperature",
                             "displayText",
-                            "displayText2Lines",
                             "buttonWasPressed",
                             "readRotaryAngle", 
                             "turnLedOn", "sleep", 
@@ -27,6 +24,7 @@ function initTask(subTask) {
                             "readLightIntensity",
                             "currentTime", 
                             "setBuzzerState",
+                            "setBuzzerNote",
                             "getTemperature", 
                             "drawPoint", 
                             "clearScreen",
@@ -48,10 +46,26 @@ function initTask(subTask) {
                             "setInfraredState",
                             "readAngularVelocity",
                             "setGyroZeroAngle",
-                            "computeRotationGyro"
+                            "computeRotationGyro",
+                            "setLedBrightness",
+                            "getLedBrightness",
+                            "isLedOn",
+                            "isLedOnWithName",
+                            "getServoAngle",
+                            "getBuzzerNote",
+                            "isBuzzerOnWithName",
+                            "turnBuzzerOn",
+                            "turnBuzzerOff",
+                            "isBuzzerOn",
+                            "displayText2Lines",
+                            "isPointSet",
+			                "connectToCloudStore",
+			                "writeToCloudStore",
+                            "readFromCloudStore",
+                            "readIRMessage",
+                            "sendIRMessage",
+                            "presetIRMessage",
                             ],
-                    medium: ["displayText", "waitForButton"],
-                    hard: ["readRotaryAngle", "readDistance"],
                 }
             },
             standardBlocks: {
@@ -59,10 +73,7 @@ function initTask(subTask) {
                 //wholeCategories: ["logic", "loops", "math", "variables"],
                 //wholeCategories: ["loops"],
                 singleBlocks: {
-                    basic: ["controls_if_else"],
                     easy: ["controls_infiniteloop", "logic_boolean", "controls_if_else", "controls_if"],
-                    medium: ["controls_whileUntil", "logic_boolean", "controls_if_else", "controls_if"],
-                    hard: ["controls_whileUntil", "logic_boolean"]
                 },
             },
         },
@@ -87,6 +98,8 @@ function initTask(subTask) {
     initBlocklySubTask(subTask);
 }
 
-//initWrapper(initTask, null, null);
-initWrapper(initTask, ["easy"], "easy", true);
+displayHelper.avatarType = "none";
+displayHelper.timeoutMinutes = 0;
+initWrapper(initTask, null, null);
+//initWrapper(initTask, ["easy"], "easy", true);
 

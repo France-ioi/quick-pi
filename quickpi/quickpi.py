@@ -7,6 +7,7 @@ from flask_sockets import Sockets
 from flask import render_template
 from flask import send_from_directory
 from flask import redirect
+from flask import jsonify
 import os
 import gevent
 import json
@@ -17,11 +18,18 @@ import boards
 import subprocess
 import os
 import select
+import uuid
 
 app = Flask(__name__)
 CORS(app)
 
 sockets = Sockets(app)
+
+distributedGraph = None
+
+distributedMessages = {}
+distributedEvents = []
+
 
 def veryfyOrTakeLock(username):
 	takelock = False
@@ -61,8 +69,13 @@ def write_timestamp(type):
 
 @sockets.route('/api/v1/commands')
 def command_socket(ws):
+	global distributedGraph
+	global distributedEvents
+
 	c = None
 	longCommand = None
+	runningDist = False
+	distProcesses = []
 	command_mode = False
 	command_mode_dirty = False
 	command_mode_library = ""
@@ -118,7 +131,7 @@ def command_socket(ws):
 		if messageArray is not None and len(messageArray) > 0:
 			messageJson = messageArray.pop(0)
 		else:
-			with gevent.Timeout(0.5, False):
+			with gevent.Timeout(0.1, False):
 				message = ws.receive()
 
 			if message is not None:
@@ -126,6 +139,28 @@ def command_socket(ws):
 	#			print("Got message " + messageJson["command"])
 
 		if messageJson is None:
+			while len(distributedEvents) > 0:
+				message = { "command" : "distributedEvent",
+					    "event" : distributedEvents.pop(0) }
+
+				ws.send(json.dumps(message))
+
+			for process in distProcesses:
+				exitCode = process["process"].poll()
+				if exitCode is not None:
+					distProcesses.remove(process)
+
+					if exitCode == 0:
+						message = { "command" : "distributedEvent",
+							    "event" : { "event" : "nodeStatus", "nodeId": process["nodeId"], "status" : "stopped", "exitCode" : exitCode } }
+					else:
+						message = { "command" : "distributedEvent",
+							    "event" : { "event" : "nodeStatus", "nodeId": process["nodeId"], "status" : "crashed", "exitCode" : exitCode } }
+
+					ws.send(json.dumps(message))
+
+
+
 			if longCommand is not None:
 				print("Checking on long command")
 				messageJson = longCommand
@@ -279,10 +314,11 @@ def command_socket(ws):
 			message = { "command": "closed" }
 			ws.send(json.dumps(message))
 
+			print("I got told to close the connection")
 			break
 		elif messageJson["command"] == "install":
 			if clean_install:
-				os.system("./install.sh clean &")
+				os.system("./install.sh clean")
 
 			longCommand = None
 
@@ -306,16 +342,96 @@ def command_socket(ws):
 
 			command_mode = False
 			clean_install = True
+		elif messageJson["command"] == "rundistributed":
+			if clean_install:
+				os.system("./install.sh clean")
 
-	print ("Clean up ...")
+			longCommand = None
+			runningDist = True
+
+			write_timestamp("install")
+
+			print("Installing...")
+			if c is not None:
+				c.terminate()
+				os.system("python3 cleanup.py")
+
+
+			file = open("/tmp/installedprogram.py", "w")
+			file.write(messageJson["program"])
+			file.close()
+
+			distributedGraph = messageJson["graph"]
+			distProcesses = []
+			for node in distributedGraph:
+
+				message = { "command" : "distributedEvent",
+					    "event" : { "event" : "nodeStatus", "nodeId": node["nodeId"], "status" : "starting" } }
+				ws.send(json.dumps(message))
+
+#				os.system("/usr/bin/python3 /tmp/installedprogram.py --nodeid {} &".format(node["nodeId"]))
+
+				print("Starting...")
+
+				process = subprocess.Popen(["/usr/bin/python3", "/tmp/installedprogram.py", "--nodeid", str(node["nodeId"])], stdout=subprocess.PIPE)
+				distProcesses.append( {"process" : process, "nodeId" : node["nodeId"] })
+
+				print("Stop..")
+
+
+
+				message = { "command" : "distributedEvent",
+					     "event" : { "event" : "nodeStatus", "nodeId": node["nodeId"], "status" : "running" } }
+				ws.send(json.dumps(message))
+
+
+
+
+			message = { "command": "installed" }
+			ws.send(json.dumps(message))
+
+			command_mode = False
+			clean_install = True
+
+
+	print ("Clean up ... ws.closed = ", ws.closed)
 	if c is not None:
 		c.terminate()
 		os.system("python3 cleanup.py")
 
 
+@app.route('/api/v1/update_image', methods=['POST'])
+def upload_update_image():
+	print("upload_update_image")
+	if request.method == 'POST':
+		print("Its a post!")
+		if 'firmware_image' not in request.files:
+			print("No firmware_image")
+			return "fail"
+		file = request.files['firmware_image']
+		print(file)
+		if file.filename == '':
+			print("Empty firmware_image")
+			return "fail"
+		if file:
+			print("Saving file");
+			try:
+				os.unlink("/tmp/quickpi.tar.gz")
+			except:
+				pass
+			file.save("/tmp/quickpi.tar.gz")
+			return "ok"
+
+	return "fail"
 @sockets.route('/api/v1/update')
 def update_socket(ws):
-	process = subprocess.Popen(["/home/pi/quickpi/scripts/update.sh"], stdout=subprocess.PIPE)
+	message = ws.receive()
+
+	version = message.strip()
+
+	print("Trying to upad to version ", version)
+
+	process = subprocess.Popen(["/home/pi/quickpi/scripts/update.sh", version], stdout=subprocess.PIPE)
 	poll_obj = select.poll()
 	poll_obj.register(process.stdout, select.POLLIN)
 
@@ -330,6 +446,92 @@ def update_socket(ws):
 		else:
 			break
 
+
+
+@app.route('/api/v1/getNodeID')
+def getNodeID():
+	json = request.get_json()
+	print(json)
+	return "hello"
+
+#@app.route('/api/v1/getNodeID/<path:nodenumber>')
+#def getNodeID(nodenumber):
+#	global globalvar
+#	globalvar = globalvar + 1
+#	return str(globalvar)
+
+@app.route('/api/v1/getNeighbors/<path:nodeid>', methods = ['POST'])
+def getNeighbors(nodeid):
+	global distributedGraph
+	neighbors = []
+
+	for node in distributedGraph:
+		if str(node["nodeId"]) == str(nodeid):
+			neighbors = node["neighbors"]
+			break
+
+	print("Neighbords", nodeid, neighbors)
+
+	return json.dumps(neighbors)
+
+@app.route('/api/v1/getNextMessage/<path:nodeid>', methods = ['POST'])
+def getNextMessage(nodeid):
+	global distributedEvents
+	global distributedMessages
+
+	message = { "hasmessage" : False }
+	if (str(nodeid) in distributedMessages) and (len(distributedMessages[str(nodeid)]) > 0):
+		messageStruct = distributedMessages[str(nodeid)].pop(0)
+
+		distributedEvents.append( { 'event'   : 'getNextMessage',
+					      'messageId': messageStruct["messageId"] } )
+
+		message["value"] = messageStruct["message"]
+		message["hasmessage"] = True
+
+	return json.dumps(message)
+
+
+@app.route('/api/v1/sendMessage/<path:nodeid>', methods = ['POST'])
+def sendMessage(nodeid):
+	global distributedMessages
+	global distributedEvents
+
+	json = request.get_json()
+#	print(json)
+
+	messsageId = str(uuid.uuid1())
+
+	distributedEvents.append( { 'event'  : 'sendMessage',
+				      'fromId' : json["fromId"],
+				      'toId'   : nodeid,
+				      'message' : json["message"],
+				      'messageId' : messsageId })
+
+
+	if str(nodeid) not in distributedMessages:
+		distributedMessages[str(nodeid)] = []
+
+	distributedMessages[str(nodeid)].append( { 'messageId' : messsageId,
+						   'message'   : json["message"] })
+
+#	print(distributedMessages)
+
+	return "OK"
+
+
+@app.route('/api/v1/submitAnswer/<path:nodeid>', methods = ['POST'])
+def submitAnswer(nodeid):
+	global distributedEvents
+	json = request.get_json()
+
+	distributedEvents.append( { 'event'  : 'submitAnswer',
+				      'nodeId' : nodeid,
+				      'answer' : json["answer"] } )
+
+	#print(distributedEvents, len(distributedEvents))
+
+	return "OK"
 
 
 @app.route('/log/<path:path>')

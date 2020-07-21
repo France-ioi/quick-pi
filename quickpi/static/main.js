@@ -158,24 +158,116 @@ function getlog_journalctl()
 	get_log("journalctl");
 }
 
+function uploadArrayBufferRawImage(url, arraybuffer, progress, done)
+{
+	var formData = new FormData();
+	formData.append("firmware_image",
+                     new Blob([arraybuffer], {type: "application/octet-stream"}),
+                     "quickpi.tar.gz");
+	fetch(url, {
+		method: 'POST',
+		body: formData
+	}).then(function(resp)
+	{
+		console.log("fetch, done");
+		return resp.text();
+	}).then(function(resptext)
+	{
+		console.log("Response", resptext);
+		done(resptext == "ok");
+	});
+}
+
+
+function downloadFile(url, progress, done)
+{
+	var req = new XMLHttpRequest();
+	req.open("GET", url, true);
+	req.addEventListener("progress", function (evt) {
+		console.log("progress");
+		if(evt.lengthComputable) {
+			var percentComplete = evt.loaded / evt.total;
+			progress(percentComplete);
+		}
+	}, false);
+
+	req.responseType = "arraybuffer";
+	req.onreadystatechange = function () {
+		if (req.readyState === 4 && req.status === 200) {
+			console.log("Download finnished");
+			var arrayBuffer = req.response; 
+
+			done(arrayBuffer);
+		}
+	};
+
+	req.onload = function(oEvent) {
+		var arrayBuffer = req.response;
+
+		console.log("Download actually finnished");
+
+		console.log(arrayBuffer);
+
+	}
+
+	req.send()
+}
+
 function update_now()
 {
 	var textarea = document.getElementById("update_area");
 	var button = document.getElementById("updatebutton");
+	var version = 0;
 
-	var ws = new WebSocket(location.origin.replace(/^http/, 'ws') + "/api/v1/update") 
+	button.disabled = true;
+	textarea.value = "Checking for updates...";
 
-	ws.onmessage = function(event) {
-		textarea.value += event.data;
-	};
+	downloadFile("http://quick-pi.org/update/version",  function(percent) {
+	}, function(arrayBuffer) {
+		var version = new TextDecoder().decode(arrayBuffer);
 
-        ws.onclose = function(event) {
-                button.disabled = false;
-        };
+		console.log ("Available version " + version);
+		textarea.value += "\nDownloading update..." ;
 
-	ws.onerror = function(error) {
-		textarea.value += "Error: " + error.message
-	};
+	        downloadFile("http://quick-pi.org/update/quickpi.tar.gz",  function(percent) {
+
+        	        //textarea.value = "Downloading update..." ;
+
+	        }, function(arrayBuffer) {
+	                textarea.value += "\nDownloaded update";
+			textarea.value += "\nUploading update image to Raspberry Pi (this may take a long time)...\n";
+
+	                uploadArrayBufferRawImage("/api/v1/update_image", arrayBuffer, null, function(status) {
+				if (!status) {
+					textarea.value += "\nUpdate failed";
+					button.disabled = false;
+				}
+				else
+				{
+					console.log("Connecting to update ws");
+				        var ws = new WebSocket(location.origin.replace(/^http/, 'ws') + "/api/v1/update")
+
+					ws.onopen = function(event) {
+						console.log("connecting sending version");
+						ws.send(version);
+					};
+
+				        ws.onmessage = function(event) {
+				                textarea.value += event.data;
+				        };
+
+				        ws.onclose = function(event) {
+				                button.disabled = false;
+				        };
+
+				        ws.onerror = function(error) {
+				                textarea.value += "Error: " + error.message
+				        };
+				}
+			});
+	        });
+
+	});
 }
 
 function initialize()

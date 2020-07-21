@@ -8,8 +8,17 @@ from PIL import Image, ImageDraw, ImageFont
 import RPi.GPIO as GPIO
 import subprocess
 import os
+import argparse
 
-UPDATEBASEURL="https://mapadev.com/test/quickpi/"
+parser = argparse.ArgumentParser()
+parser.add_argument('--asktocancel', action='store')
+args = parser.parse_args()
+
+asktocancel = 0
+if args.asktocancel is not None:
+	asktocancel = int(args.asktocancel)
+
+UPDATEBASEURL="http://quick-pi.org/update/"
 QUICKPIBASEDIR="/home/pi/"
 
 screenwidth = 128
@@ -111,6 +120,7 @@ device.display(oledimage)
 
 time.sleep(5)
 
+
 def displayText(line1, line2, line3):
 	draw.rectangle((0, 0, screenwidth - 1, screenheight - 1), outline=0, fill=0)
 	draw.text((0, 0), line1, font=oledfont, fill=255)
@@ -195,6 +205,27 @@ def curlErrorToString(result):
 		return "Peer certificate cannot be authenticated"
 
 	return str(result)
+
+
+if asktocancel > 0:
+
+	start = time.time()
+	oldtimeleft = asktocancel
+	while True:
+		retval = waitForButton([UP_PIN, DOWN_PIN, LEFT_PIN, RIGHT_PIN, CENTER_PIN, BUTTON2_PIN], False)
+
+		if retval is not None:
+			displayText("", "", "")
+			exit(42)
+
+		timeleft = int(asktocancel - (time.time() - start))
+		if timeleft != oldtimeleft:
+			displayText("Running installed program", "press any key to cancel", str(timeleft))
+			oldtimeleft = timeleft
+
+		if timeleft <= 0:
+			displayText("", "", "")
+			exit (0)
 
 
 if settings["SCHOOL"] == "schoolkey" and settings["NAME"] == "quickpi1":
@@ -310,14 +341,14 @@ while True:
 				btipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "pan0"]).decode("ascii").strip()
 
 				ipaddresses = []
+				if wlanipaddress:
+					ipaddresses.append(["WIFI", wlanipaddress])
+
 				if ethipaddress:
 					ipaddresses.append(["Cable", ethipaddress])
 
 				if usbipaddress:
 					ipaddresses.append(["USB", usbipaddress])
-
-				if wlanipaddress:
-					ipaddresses.append(["WIFI", wlanipaddress])
 
 				if btipaddress:
 					ipaddresses.append(["BT", btipaddress])
@@ -352,6 +383,25 @@ while True:
 				currentversion = file.read()
 				file.close()
 
+				ethipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "eth0"]).decode("ascii").strip()
+				wlanipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getip.sh", "wlan0"]).decode("ascii").strip()
+
+				keepgoing = True
+				if (not ethipaddress) and (not wlanipaddress):
+					drawMenu("To update connect to wifi: ", "Or use config page", False)
+
+					while True:
+						pressed = waitForButton([LEFT_PIN], False)
+
+						if pressed == LEFT_PIN:
+							keepgoing = False
+							break
+	
+
+				if not keepgoing
+					continue
+
+
 				drawMenu("Current version: " + str(currentversion), "Press to check", False)
 				time.sleep(0.1)
 
@@ -368,7 +418,6 @@ while True:
 				if not keepgoing:
 					continue
 
-				drawMenu("Auto Update: " + str(currentversion), "Checking ...", False)
 				time.sleep(1)
 
 				try:
@@ -393,7 +442,7 @@ while True:
 				newversion = int(newversion.strip())
 				currentversion = int(currentversion.strip())
 
-				if newversion == currentversion:
+				if newversion > currentversion:
 					drawMenu("Auto update", "Already at " + str(currentversion), False)
 					while True:
 						pressed = waitForButton([LEFT_PIN], False)

@@ -1,29 +1,42 @@
 #!/bin/bash
 
 VERSION=$(cat /home/pi/quickpi/version)
-BASEURL="https://mapadev.com/test/quickpi/"
+BASEURL="http://quick-pi.org/update/"
+
+NEWVERSION=$1
+HAVEFILE=""
+if [ $NEWVERSION != "" ]; then
+	HAVEFILE="yes"
+fi
+
 
 echo "Current version: $VERSION"
 echo "Checking for new version..."
 
-curl $BASEURL"version" --output /tmp/version
+if [ $NEWVERSION != "" ]; then
+	curl $BASEURL"version" --output /tmp/version
 
-NEWVERSION=$(cat /tmp/version)
+	NEWVERSION=$(cat /tmp/version)
+fi
 
-if [ "$VERSION" == "$NEWVERSION" ]
+if [ "$VERSION" -ge "$NEWVERSION" ]
 then
-	echo "Already at latest version $NEWVERSION"
+	echo "Server version $NEWVERSION not updating"
 	exit 0
 fi
 
-echo "New version $NEWVERSION found"
-echo "Downloading ..."
-curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz
-RESULT=$?
+return
 
-if [ $RESULT != "0" ]; then
-	echo "Error when downloading update"
-	exit 1
+if [ $HAVEFILE != "" ]; then
+	echo "New version $NEWVERSION found"
+	echo "Downloading ..."
+	curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz
+	RESULT=$?
+
+	if [ $RESULT != "0" ]; then
+		echo "Error when downloading update"
+		exit 1
+	fi
 fi
 
 echo "Uncompressing update..."
@@ -41,11 +54,11 @@ if [ $RESULT != "0" ]; then
         exit 1
 fi
 
-echo "Post update unkeeping..."
-cp -f /tmp/version /home/pi/quickpi/
+echo "Post update upkeeping..."
+echo $NEWVERSION > /home/pi/quickpi/version
 sudo /home/pi/quickpi/scripts/afterupdate.sh
 
 echo "Sucess, restarting ..."
 
-sleep 3
+sleep 8
 sudo reboot
