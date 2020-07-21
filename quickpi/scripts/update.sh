@@ -11,13 +11,13 @@ fi
 
 
 echo "Current version: $VERSION"
-echo "Checking for new version..."
+echo "Update version: $NEWVERSION"
 
-if [ $NEWVERSION != "" ]; then
-	curl $BASEURL"version" --output /tmp/version
-
-	NEWVERSION=$(cat /tmp/version)
-fi
+#if [ $NEWVERSION != "" ]; then
+#	curl $BASEURL"version" --output /tmp/version
+#
+#	NEWVERSION=$(cat /tmp/version)
+#fi
 
 if [ "$VERSION" -ge "$NEWVERSION" ]
 then
@@ -25,19 +25,17 @@ then
 	exit 0
 fi
 
-return
+#if [ $HAVEFILE != "" ]; then
+#	echo "New version $NEWVERSION found"
+#	echo "Downloading ..."
+#	curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz
+#	RESULT=$?
 
-if [ $HAVEFILE != "" ]; then
-	echo "New version $NEWVERSION found"
-	echo "Downloading ..."
-	curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz
-	RESULT=$?
-
-	if [ $RESULT != "0" ]; then
-		echo "Error when downloading update"
-		exit 1
-	fi
-fi
+#	if [ $RESULT != "0" ]; then
+#		echo "Error when downloading update"
+#		exit 1
+#	fi
+#fi
 
 echo "Uncompressing update..."
 sudo mount / -o remount,rw
