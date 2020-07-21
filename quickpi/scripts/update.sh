@@ -4,10 +4,10 @@ VERSION=$(cat /home/pi/quickpi/version)
 BASEURL="http://quick-pi.org/update/"
 
 NEWVERSION=$1
-HAVEFILE=""
-if [ $NEWVERSION != "" ]; then
-	HAVEFILE="yes"
-fi
+#HAVEFILE=""
+#if [ $NEWVERSION != "" ]; then
+#	HAVEFILE="yes"
+#fi
 
 
 echo "Current version: $VERSION"
