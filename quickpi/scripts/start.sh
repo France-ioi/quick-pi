@@ -4,7 +4,15 @@ service ntp stop
 /usr/lib/ntp/ntp-systemd-wrapper
 
 DISABLETUNNEL="0"
-source /tmp/quickpi.txt
+OLDIFS=$IFS
+IFS="="
+while read -r name value; do
+        if [ -n "$name" ] && [[ "$name" != "#"* ]]; then
+                echo "Content of $name is ${value//\"/}"
+                export "$name"="$value"
+        fi
+done < /tmp/quickpi.txt
+IFS=$OLDIFS
 
 /home/pi/quickpi/scripts/runserver.sh
 

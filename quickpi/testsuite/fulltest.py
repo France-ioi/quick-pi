@@ -155,6 +155,7 @@ def testButtons():
 	buttons_already_pressed = []
 	cleared = False
 
+
 	while True:
 		how_many_pressed = 0
 
@@ -174,6 +175,15 @@ def testButtons():
 					fill(0)
 					noStroke()
 					drawRectangle(0, 0, 127, 31)
+
+					stroke(1)
+					drawCircle(17, 15, 6)
+					drawCircle(28, 15, 6)
+					drawCircle(17, 25, 6)
+					drawCircle(17, 6, 6)
+					drawCircle(6, 15, 6)
+					drawCircle(50, 15, 6)
+
 					fill(1)
 					cleared = True
 

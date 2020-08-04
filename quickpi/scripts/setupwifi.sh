@@ -4,7 +4,17 @@ cp /boot/quickpi.txt /tmp/quickpi-tmp.txt
 dos2unix /tmp/quickpi-tmp.txt
 echo "set -e" > /tmp/quickpi.txt
 cat /tmp/quickpi-tmp.txt >> /tmp/quickpi.txt
-source /tmp/quickpi.txt
+
+OLDIFS=$IFS
+IFS="="
+while read -r name value; do
+        if [ -n "$name" ] && [[ "$name" != "#"* ]]; then
+                echo "Content of $name is ${value//\"/}"
+                export "$name"="$value"
+        fi
+done < /tmp/quickpi.txt
+IFS=$OLDIFS
+
 
 echo "
 ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev

@@ -11,7 +11,16 @@ if [ ! -f /tmp/quickpi.txt ]; then
 	exit 0
 fi
 
-source /tmp/quickpi.txt
+OLDIFS=$IFS
+IFS="="
+while read -r name value; do
+        if [ -n "$name" ] && [[ "$name" != "#"* ]]; then
+                echo "Content of $name is ${value//\"/}"
+                export "$name"="$value"
+        fi
+done < /tmp/quickpi.txt
+IFS=$OLDIFS
+
 status=$?
 set +e
 if [  "$status" -ne "0" ]; then

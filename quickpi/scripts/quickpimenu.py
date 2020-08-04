@@ -9,6 +9,7 @@ import RPi.GPIO as GPIO
 import subprocess
 import os
 import argparse
+import pigpio
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--asktocancel', action='store')
@@ -37,6 +38,8 @@ LEFT_PIN=11
 RIGHT_PIN=8
 CENTER_PIN=7
 BUTTON2_PIN=26
+BUZZER_PIN=12
+REDLED_PIN=4
 
 RUNAUTOTEST = 1
 LEDSHOW = 2
@@ -78,6 +81,32 @@ GPIO.setup(LEFT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(RIGHT_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(CENTER_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 GPIO.setup(BUTTON2_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(REDLED_PIN, GPIO.OUT)
+GPIO.output(REDLED_PIN, GPIO.LOW)
+
+
+pi = pigpio.pi()
+def changePassiveBuzzerState(pin, state):
+	state = int(state)
+
+	pi.set_mode(pin, pigpio.OUTPUT)
+
+	pi.wave_clear()
+	pi.wave_tx_stop()
+
+	if state:
+		wf = []
+
+		wf.append(pigpio.pulse(1<<pin, 0, 500))
+		wf.append(pigpio.pulse(0, 1<<pin, 500))
+
+		pi.wave_add_generic(wf)
+		a = pi.wave_create()
+		pi.wave_send_repeat(a)
+	else:
+		pi.wave_tx_stop()
+		GPIO.setup(pin, GPIO.OUT)
+		GPIO.output(pin, GPIO.LOW)
 
 def load_settings():
 	settings = {}
@@ -169,6 +198,11 @@ def waitForButton(buttons, wait=True):
 	while keepgoing:
 		for button in buttons:
 			if GPIO.input(button):
+				changePassiveBuzzerState(BUZZER_PIN, 1)
+				GPIO.output(REDLED_PIN, GPIO.HIGH)
+				time.sleep(0.050)
+				changePassiveBuzzerState(BUZZER_PIN, 0)
+				GPIO.output(REDLED_PIN, GPIO.LOW)
 				return button
 		keepgoing = wait
 		time.sleep(0.05)
@@ -354,9 +388,13 @@ while True:
 					ipaddresses.append(["BT", btipaddress])
 
 				ipindex = 0
-				morethanone = len(ipaddresses) > 0
+				morethanone = len(ipaddresses) > 1
 
-				drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
+				if len(ipaddresses) == 0:
+					drawMenu("IP Address", "No IP", false)
+				else:
+					drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
+
 				while True:
 					pressed = waitForButton([LEFT_PIN, UP_PIN, DOWN_PIN], True)
 					if pressed == LEFT_PIN:
@@ -370,7 +408,8 @@ while True:
 						if ipindex == len(ipaddresses):
 							ipindex = 0
 
-					drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
+					if len(ipaddresses) > 0:
+						drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
 					time.sleep(0.2)
 
 			elif menuoption == RUNBOARDTEST:

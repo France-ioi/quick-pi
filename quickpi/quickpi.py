@@ -631,7 +631,7 @@ def savesettings():
 		f.write("PASSWORD=" + settings["PASSWORD"] + "\r\n")
 	else:
 		print("----")
-		f.write("PASSWORD=" + removewhitespace(json["password"]) + "\r\n")
+		f.write("PASSWORD=" + json["password"] + "\r\n")
 
 	f.write("STATICNETWORK=" + staticnetwork + "\r\n")
 	f.write("STATICIPADDR=" + removewhitespace(json["ip"]) + "\r\n")

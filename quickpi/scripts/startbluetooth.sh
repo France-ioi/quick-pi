@@ -1,7 +1,15 @@
 #!/bin/bash
 
 ENABLEBLUETOOTH=0
-source /tmp/quickpi.txt
+OLDIFS=$IFS
+IFS="="
+while read -r name value; do
+        if [ -n "$name" ] && [[ "$name" != "#"* ]]; then
+                echo "Content of $name is ${value//\"/}"
+                export "$name"="$value"
+        fi
+done < /tmp/quickpi.txt
+IFS=$OLDIFS
 
 if [ $ENABLEBLUETOOTH -ne "1" ]; then
     exit;

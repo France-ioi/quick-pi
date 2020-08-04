@@ -4,20 +4,20 @@ VERSION=$(cat /home/pi/quickpi/version)
 BASEURL="http://quick-pi.org/update/"
 
 NEWVERSION=$1
-#HAVEFILE=""
-#if [ $NEWVERSION != "" ]; then
-#	HAVEFILE="yes"
-#fi
+HAVEFILE=""
+if [ $NEWVERSION != "" ]; then
+	HAVEFILE="yes"
+fi
 
 
 echo "Current version: $VERSION"
 echo "Update version: $NEWVERSION"
 
-#if [ $NEWVERSION != "" ]; then
-#	curl $BASEURL"version" --output /tmp/version
-#
-#	NEWVERSION=$(cat /tmp/version)
-#fi
+if [ "$NEWVERSION" != "" ]; then
+	curl $BASEURL"version" --output /tmp/version
+
+	NEWVERSION=$(cat /tmp/version)
+fi
 
 if [ "$VERSION" -ge "$NEWVERSION" ]
 then
@@ -25,17 +25,17 @@ then
 	exit 0
 fi
 
-#if [ $HAVEFILE != "" ]; then
-#	echo "New version $NEWVERSION found"
-#	echo "Downloading ..."
-#	curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz
-#	RESULT=$?
+if [ "$HAVEFILE" != "" ]; then
+	echo "New version $NEWVERSION found"
+	echo "Downloading ..."
+	curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz
+	RESULT=$?
 
-#	if [ $RESULT != "0" ]; then
-#		echo "Error when downloading update"
-#		exit 1
-#	fi
-#fi
+	if [ $RESULT != "0" ]; then
+		echo "Error when downloading update"
+		exit 1
+	fi
+fi
 
 echo "Uncompressing update..."
 sudo mount / -o remount,rw
