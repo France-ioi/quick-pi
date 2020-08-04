@@ -1,7 +1,7 @@
 #!/bin/bash
 
 VERSION=$(cat /home/pi/quickpi/version)
-BASEURL="http://quick-pi.org/update/"
+BASEURL="https://quick-pi.org/update/"
 
 NEWVERSION=$1
 HAVEFILE=""
@@ -13,7 +13,7 @@ fi
 echo "Current version: $VERSION"
 echo "Update version: $NEWVERSION"
 
-if [ "$NEWVERSION" != "" ]; then
+if [ "$NEWVERSION" == "" ]; then
 	curl $BASEURL"version" --output /tmp/version
 
 	NEWVERSION=$(cat /tmp/version)
@@ -25,7 +25,7 @@ then
 	exit 0
 fi
 
-if [ "$HAVEFILE" != "" ]; then
+if [ "$HAVEFILE" == "" ]; then
 	echo "New version $NEWVERSION found"
 	echo "Downloading ..."
 	curl "$BASEURL""quickpi.tar.gz" --output /tmp/quickpi.tar.gz

@@ -19,7 +19,7 @@ asktocancel = 0
 if args.asktocancel is not None:
 	asktocancel = int(args.asktocancel)
 
-UPDATEBASEURL="http://quick-pi.org/update/"
+UPDATEBASEURL="https://quick-pi.org/update/"
 QUICKPIBASEDIR="/home/pi/"
 
 screenwidth = 128

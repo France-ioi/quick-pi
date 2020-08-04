@@ -225,14 +225,14 @@ function update_now()
 	button.disabled = true;
 	textarea.value = "Checking for updates...";
 
-	downloadFile("http://quick-pi.org/update/version",  function(percent) {
+	downloadFile("https://quick-pi.org/update/version",  function(percent) {
 	}, function(arrayBuffer) {
 		var version = new TextDecoder().decode(arrayBuffer);
 
 		console.log ("Available version " + version);
 		textarea.value += "\nDownloading update..." ;
 
-	        downloadFile("http://quick-pi.org/update/quickpi.tar.gz",  function(percent) {
+	        downloadFile("https://quick-pi.org/update/quickpi.tar.gz",  function(percent) {
 
         	        //textarea.value = "Downloading update..." ;
 
