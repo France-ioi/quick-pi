@@ -102,6 +102,9 @@ ln -s /tmp/hostapd.conf /etc/hostapd/hostapd.conf
 interface usb0
 static ip_address=192.168.233.1
 
+interface pan0
+static ip_address=192.168.233.2
+
 denyinterfaces ap0
 interface ap0
 nohook wpa_supplicant
@@ -113,6 +116,7 @@ nohook wpa_supplicant
 ```
 interface=usb0
 interface=ap0
+interface=pan0
 dhcp-range=192.168.233.10,192.168.233.230,2h
 dhcp-option=usb0,3
 dhcp-option=usb0,6
