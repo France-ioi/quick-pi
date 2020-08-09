@@ -582,6 +582,17 @@ def load_settings():
 def getsettings():
 	settings = load_settings()
 
+	process = subprocess.Popen(["/home/pi/quickpi/scripts/getmac.sh", "wlan0"], stdout=subprocess.PIPE)
+	(output, err) = process.communicate()
+
+
+	settings["WIFIMAC"] = output.decode("utf-8");
+
+	process = subprocess.Popen(["/home/pi/quickpi/scripts/getmac.sh", "eth0"], stdout=subprocess.PIPE)
+	(output, err) = process.communicate()
+	settings["ETHMAC"] = output.decode("utf-8");
+
+
 	return json.dumps(settings)
 
 

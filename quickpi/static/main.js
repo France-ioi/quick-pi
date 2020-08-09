@@ -21,6 +21,58 @@ function openTab(evt, cityName) {
   evt.currentTarget.className += " active";
 } 
 
+function staticIpClicked()
+{
+	var isstaticip = document.getElementById('staticip').checked;
+
+        var ip = document.getElementById('ip');
+        var sn = document.getElementById('sn');
+        var gw = document.getElementById('gw');
+        var ns = document.getElementById('ns');
+
+	ip.disabled = !isstaticip;
+	sn.disabled = !isstaticip;
+	gw.disabled = !isstaticip;
+	ns.disabled = !isstaticip;
+}
+
+function proxyAuthClicked()
+{
+	var useproxyuser = document.getElementById('useproxyuser').checked;
+        var proxyuser = document.getElementById('proxyuser');
+        var proxypassword = document.getElementById('proxypassword');
+
+        proxyuser.disabled = !useproxyuser;
+        proxypassword.disabled = !useproxyuser;
+}
+
+function proxyClicked()
+{
+        var useproxy = document.getElementById('useproxy').checked;
+
+        var proxyaddress = document.getElementById('proxyaddress');
+        var proxyport = document.getElementById('proxyport');
+
+        var proxyuser = document.getElementById('proxyuser');
+        var proxypassword = document.getElementById('proxypassword');
+        var useproxyuser = document.getElementById('useproxyuser');
+
+        proxyaddress.disabled = !useproxy;
+        proxyport.disabled = !useproxy;
+	useproxyuser.disabled = !useproxy;
+
+
+	if (!useproxy)
+	{
+	        proxypassword.disabled = !useproxy;
+		proxyuser.disabled = !useproxy;
+	}
+	else
+	{
+		proxyAuthClicked();
+	}
+}
+
 function save()
 {
 	var isstaticip = document.getElementById('staticip').checked;
@@ -308,6 +360,13 @@ function initialize()
 		else
 			document.getElementById('disabletunnel').checked = true;
 
+
+		document.getElementById('wifimac').innerText = myJson.WIFIMAC;
+		document.getElementById('ethmac').innerText = myJson.ETHMAC;
+
+
+		staticIpClicked();
+		proxyClicked();
 
 		//document.getElementById('proxypass').value = myJson.;
 

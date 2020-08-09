@@ -319,6 +319,22 @@ def displayTextOled(line1, line2="", background=True):
 
     updateScreen()
 
+def displayTextOledAtPos(line1, x, y, fill=255):
+    global oleddisp
+    global oledfont
+    global oledimage
+    global oleddraw
+
+    initOLEDScreen()
+
+    # This will allow arguments to be numbers
+    line1 = str(line1)
+
+    oleddraw.text((x, y), line1, font=oledfont, fill=fill)
+
+    updateScreen()
+
+
 def autoUpdate(autoupdate):
     global oledautoupdate
 

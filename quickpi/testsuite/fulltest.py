@@ -140,10 +140,13 @@ def testBuzzer():
 	start = time.time()
 	while time.time() - start < 1:
 		changePassiveBuzzerState(12, 1)
-		soundon = getAverageSoundLevel(0.05)
+		soundon = getAverageSoundLevel(0.5)
 		changePassiveBuzzerState(12, 0)
-		soundoff = getAverageSoundLevel(0.05)
-		if (soundon - soundoff) < 1:
+		soundoff = getAverageSoundLevel(0.5)
+
+		print("sound on", soundon, "sound off", soundoff, "diff", soundon - soundoff)
+	
+		if (soundon - soundoff) < 100:
 			print("Failed: diff", soundon - soundoff)
 			return False
 
@@ -199,6 +202,13 @@ def testButtons():
 					drawCircle(6, 15, 6)
 				elif button_pressed == 26:  #Button2
 					drawCircle(50, 15, 6)
+
+				noStroke()
+				fill(0)
+				drawRectangle(80, 0, 128 - 80, 31)
+				fill(1)
+				stroke(1)
+				displayTextOledAtPos(str(len(buttons_already_pressed)) + "/6", 80, 5)
 
 		if buttons_already_pressed == buttons_expected:
 			return True
@@ -394,6 +404,9 @@ try:
 		result = checkTest(testDistanceVL53l0x(False), "distance")
 
 	if result[0]:
+		result = checkTest(testBuzzer(), "buzzer-mic")
+
+	if result[0]:
 		displayTextOled("Put board face up")
 		print("Waiting for board to be face up...")
 		result = checkTest(waitForBoardUp(), "boardup")
@@ -405,9 +418,6 @@ try:
 		result = checkTest(testGyro(), "gyro")
 	stop_gyro = True
 
-#	if result[0]:
-#		result = checkTest(testBuzzer(), "buzzer-mic")
-
 	boardstatus = ""
 	a = random.randrange(0, 255)
 	b = a * 229
@@ -416,9 +426,9 @@ try:
 	b = "%0.2X" % b
 
 	if result[0]:
-		print("BOARD PASSED ALL TEST")
+		print("BOARD PASSED ALL TESTS")
 #		displayTextOled("PASSED " + b + a)
-		displayTextOled("ALL TEST PASSED")
+		displayTextOled("ALL TESTS PASSED")
 		boardstatus = "BOARD OK"
 		#os.system("echo " + str(result[1]) + " > /mnt/data/" + a + b)
 

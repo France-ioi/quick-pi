@@ -18,6 +18,8 @@
   <button class="tablinks" onclick="openTab(event, 'config')">Configuration</button>
   <button class="tablinks" onclick="openTab(event, 'diagnostics')">Diagnostics</button>
   <button class="tablinks" onclick="openTab(event, 'update')">Update</button>
+  <button class="tablinks" onclick="openTab(event, 'programming')">Programming</button>
+
 </div>
 
 	<div id="diagnostics" class="tabcontent">
@@ -46,8 +48,22 @@
 
 	<div id="config" class="tabcontent">
                   <table>
+
+
+                  <tr>
+                        <td><label>School name:</label></td>  <td><input type="text" id="school" maxlength="11"></td>
+                   </tr>
+                  <tr>
+                        <td><label>Quickpi Name:</label></td>  <td><input type="text" id="qname" maxlength="11"></td>
+                   </tr>
+
+                   <tr>
+                        <td colspan="2"><hr></td>
+                   </tr>
+
+
                  <tr>
-                         <td><label>SSID:</label></td>
+                         <td><label>WiFi SSID:</label></td>
 
                          <td>
                          <input type="text" id="ssid_input">
@@ -64,15 +80,12 @@
                         <td><label>Password:</label></td><td><input type="password" id="password"></td>
 		  </tr>
 
-                  <tr>
-                        <td><label>School name:</label></td>  <td><input type="text" id="school" maxlength="11"></td>
-                   </tr>
-                  <tr>
-                        <td><label>Quickpi Name:</label></td>  <td><input type="text" id="qname" maxlength="11"></td>
+                   <tr>
+                        <td colspan="2"><hr></td>
                    </tr>
 
                    <tr>
-                         <td colspan="3"><input id="staticip" type="checkbox" value="1"> <label>Static IP configuration</label></td>
+                         <td colspan="3"><input id="staticip" type="checkbox" value="1" onclick="staticIpClicked()"> <label>Static IP configuration</label></td>
                    </tr>
                   <tr>
                         <td><label>IP address:</label></td>  <td><input type="text" id="ip" ></td>
@@ -84,12 +97,15 @@
 			<td><label>DNS Server:</label></td><td><input type="text" id="ns" ></td>
                    </tr>
                    <tr>
-                         <td><label>Default gateway:</label></td><td><input type="text" id="gw" ></td>
+                         <td><label>Default gateway:</label></td><td><input type="text" id="gw" </td>
                    </tr>
+		   <tr>
+			<td colspan="2"><hr></td>
+		   </tr>
 
 
                    <tr>
-                         <td colspan="3"><input id="useproxy" type="checkbox" value="1"> <label>Use proxy for internet connection</label></td>
+                         <td colspan="3"><input id="useproxy" type="checkbox" value="1" onclick="proxyClicked()"> <label>Use proxy for internet connection</label></td>
                    </tr>
                   <tr>
                         <td><label>Proxy Address:</label></td>  <td><input type="text" id="proxyaddress" ></td>
@@ -98,7 +114,7 @@
                         <td><label>Proxy Port:</label></td><td><input type="text" id="proxyport" ></td>
                    </tr>
                    <tr>
-                         <td colspan="3"><input id="useproxyuser" type="checkbox" value="1"> <label>Proxy needs user and password</label></td>
+                         <td colspan="3"><input id="useproxyuser" type="checkbox" value="1" onclick="proxyAuthClicked()"> <label>Proxy needs user and password</label></td>
                    </tr>
 
                    <tr>
@@ -106,6 +122,10 @@
                    </tr>
                    <tr>
                          <td><label>Proxy password:</label></td><td><input type="text" id="proxypassword" ></td>
+                   </tr>
+
+                   <tr>
+                        <td colspan="2"><hr></td>
                    </tr>
 
 
@@ -120,6 +140,25 @@
                   <tr>
 			<td colspan="3"><button type="button" onclick="save()">Save settings</button></td> 
                    </tr>
+
+
+                   <tr>
+                        <td colspan="2"><hr></td>
+                   </tr>
+
+
+
+                   <tr>
+                         <td colspan="3"><label>WiFi MAC Adress: </label> <label id="wifimac"></label></td>
+                   </tr>
+
+                   <tr>
+                         <td colspan="3"><label>Ethernet MAC Adress: </label> <label id="ethmac"></label></td>
+                   </tr>
+
+
+
+
 		</table>
 	</div>
 
@@ -133,9 +172,28 @@
 
 	</div>
 
+        <div id="programming" class="tabcontent">
+	        <div>
+			<p>
+	                <a href="/static/objets_connectes/testbed/index.html" target="_blank">Programming enviroment (Blockly)</a>
+			</p>
+	        </div>
+                <div>
+			<p>
+                        <a href="/static/objets_connectes/testbed/index.html?language=python" target="_blank">Programming enviroment (Python)</a>
+			</p>
+                </div>
+                <div>
+			<p>
+                        <a href="/static/objets_connectes/testbed/index.html?language=scratch" target="_blank">Programming enviroment (Scratch)</a>
+			</p>
+                </div>
+                <div>
+			<p>
+                        <a href="https://quick-pi.org" target="_blank">More information and exercises at quick-pi.org</a>
+			</p>
+                </div>
+        </div>
 
-	<div>
-		<a href="/static/objets_connectes/testbed/index.html">Go to programming enviroment</a>
-	</div>
 </body>
 </html>

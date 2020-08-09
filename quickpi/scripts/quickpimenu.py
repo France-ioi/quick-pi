@@ -56,6 +56,8 @@ RUNBOARDTEST = 9
 
 ABOUTQUICKPI = 10
 
+SHOWMACADDRESS = 11
+
 main_menu = [ 
 ##	      { "menu" :  "Auto Test", "submenu" : 
 #			[ {"menu" : "Run", "id" :  RUNAUTOTEST } ]},
@@ -66,7 +68,9 @@ main_menu = [
 	      { "menu" : "Configuration", "submenu": 
 			[ {"menu" : "Start Access Point mode" , "id" : STARTAPMODE },
 			  {"menu" : "Show school and name", "id" : SHOWSCHOOL },
-			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS } ]},
+			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS }, 
+			  {"menu" : "Show Mac Address", "id" : SHOWMACADDRESS } ]},
+ 
               { "menu" :  "Check for updates", "id" :  RUNAUTOUPDATE },
               { "menu" :  "Board test", "submenu": 
 			[ { "menu" : "Press to run", "id" :  RUNBOARDTEST } ] },
@@ -391,7 +395,7 @@ while True:
 				morethanone = len(ipaddresses) > 1
 
 				if len(ipaddresses) == 0:
-					drawMenu("IP Address", "No IP", false)
+					drawMenu("IP Address", "No IP", False)
 				else:
 					drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
 
@@ -411,6 +415,44 @@ while True:
 					if len(ipaddresses) > 0:
 						drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
 					time.sleep(0.2)
+
+			elif menuoption == SHOWMACADDRESS:
+				ethipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getmac.sh", "eth0"]).decode("ascii").strip()
+				wlanipaddress = getCommandOutput(["/home/pi/quickpi/scripts/getmac.sh", "wlan0"]).decode("ascii").strip()
+
+				ipaddresses = []
+				if wlanipaddress:
+					ipaddresses.append(["WIFI", wlanipaddress])
+
+				if ethipaddress:
+					ipaddresses.append(["Cable", ethipaddress])
+
+				ipindex = 0
+				morethanone = len(ipaddresses) > 1
+
+				if len(ipaddresses) == 0:
+					drawMenu("Mac Address", "No network int", False)
+				else:
+					drawMenu("Mac Address " + ipaddresses[ipindex][0], ipaddresses[ipindex][1], morethanone)
+
+				while True:
+					pressed = waitForButton([LEFT_PIN, UP_PIN, DOWN_PIN], True)
+					if pressed == LEFT_PIN:
+						break
+					elif pressed == UP_PIN:
+						ipindex = ipindex - 1;
+						if ipindex == -1:
+							ipindex = len(ipaddresses) - 1
+					elif pressed == DOWN_PIN:
+						ipindex = ipindex + 1
+						if ipindex == len(ipaddresses):
+							ipindex = 0
+
+					if len(ipaddresses) > 0:
+						drawMenu("Mac Address " + ipaddresses[ipindex][0], ipaddresses[ipindex][1], morethanone)
+					time.sleep(0.2)
+
+
 
 			elif menuoption == RUNBOARDTEST:
 				os.system("python3 /home/pi/quickpi/testsuite/fulltest.py")
