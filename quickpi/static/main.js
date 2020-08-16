@@ -34,7 +34,44 @@ function staticIpClicked()
 	sn.disabled = !isstaticip;
 	gw.disabled = !isstaticip;
 	ns.disabled = !isstaticip;
+
+        var ip_row = document.getElementById('ip_row');
+        var sn_row = document.getElementById('sn_row');
+        var gw_row = document.getElementById('gw_row');
+        var ns_row = document.getElementById('ns_row');
+
+        ip_row.style.display = isstaticip ? "" : "none";
+        sn_row.style.display = isstaticip ? "" : "none";
+        gw_row.style.display = isstaticip ? "" : "none";
+        ns_row.style.display = isstaticip ? "" : "none";
+
 }
+
+function staticIpClicked_eth()
+{
+        var isstaticip = document.getElementById('staticip_eth').checked;
+
+        var ip = document.getElementById('ip_eth');
+        var sn = document.getElementById('sn_eth');
+        var gw = document.getElementById('gw_eth');
+        var ns = document.getElementById('ns_eth');
+
+        ip.disabled = !isstaticip;
+        sn.disabled = !isstaticip;
+        gw.disabled = !isstaticip;
+        ns.disabled = !isstaticip;
+
+        var ip_row = document.getElementById('ip_eth_row');
+        var sn_row = document.getElementById('sn_eth_row');
+        var gw_row = document.getElementById('gw_eth_row');
+        var ns_row = document.getElementById('ns_eth_row');
+
+	ip_row.style.display = isstaticip ? "" : "none"; 
+        sn_row.style.display = isstaticip ? "" : "none";
+        gw_row.style.display = isstaticip ? "" : "none";
+        ns_row.style.display = isstaticip ? "" : "none";
+}
+
 
 function proxyAuthClicked()
 {
@@ -338,11 +375,32 @@ function initialize()
 
 	        document.getElementById('staticip').checked = myJson.STATICNETWORK == "1" ? true : false;
 	        document.getElementById('ip').value = myJson.STATICIPADDR;
-
 	        document.getElementById('sn').value = myJson.STATICMASK;
-
 	        document.getElementById('gw').value = myJson.STATICGATEWAY;
 	        document.getElementById('ns').value = myJson.STATICDNS;
+
+		if (!myJson.STATICNETWORK_ETH)
+			myJson.STATICNETWORK_ETH = "0"
+
+		if(!myJson.STATICIPADDR_ETH)
+			myJson.STATICIPADDR_ETH = "192.168.0.32";
+
+		if (!myJson.STATICMASK_ETH)
+			myJson.STATICMASK_ETH = "255.255.255.0";
+
+		if (!myJson.STATICGATEWAY_ETH)
+			myJson.STATICGATEWAY_ETH = "192.168.0.1";
+
+		if (!myJson.STATICDNS_ETH)
+			myJson.STATICDNS_ETH = "8.8.8.8";
+
+                document.getElementById('staticip_eth').checked = myJson.STATICNETWORK_ETH == "1" ? true : false;
+                document.getElementById('ip_eth').value = myJson.STATICIPADDR_ETH;
+                document.getElementById('sn_eth').value = myJson.STATICMASK_ETH;
+                document.getElementById('gw_eth').value = myJson.STATICGATEWAY_ETH;
+                document.getElementById('ns_eth').value = myJson.STATICDNS_ETH;
+
+
 	        document.getElementById('bluetooth').checked = myJson.ENABLEBLUETOOTH == "1" ? true : false;
 
         	document.getElementById('school').value = myJson.SCHOOL;
@@ -366,6 +424,7 @@ function initialize()
 
 
 		staticIpClicked();
+		staticIpClicked_eth();
 		proxyClicked();
 
 		//document.getElementById('proxypass').value = myJson.;

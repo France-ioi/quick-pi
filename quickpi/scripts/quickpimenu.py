@@ -397,7 +397,7 @@ while True:
 				if len(ipaddresses) == 0:
 					drawMenu("IP Address", "No IP", False)
 				else:
-					drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
+					drawMenu("IP Address - " + ipaddresses[ipindex][0], ipaddresses[ipindex][1], morethanone)
 
 				while True:
 					pressed = waitForButton([LEFT_PIN, UP_PIN, DOWN_PIN], True)
@@ -413,7 +413,7 @@ while True:
 							ipindex = 0
 
 					if len(ipaddresses) > 0:
-						drawMenu("IP Address", ipaddresses[ipindex][0] + ":" + ipaddresses[ipindex][1], morethanone)
+						drawMenu("IP Address - " + ipaddresses[ipindex][0], ipaddresses[ipindex][1], morethanone)
 					time.sleep(0.2)
 
 			elif menuoption == SHOWMACADDRESS:

@@ -4,9 +4,9 @@ FIRSTTIME=1
 DISABLEPING=0
 
 
-/home/pi/quickpi/script/showtext.py "Initialized"
+#/home/pi/quickpi/script/showtext.py "Initialized"
 if [ ! -f /tmp/quickpi.txt ]; then
-	/home/pi/quickpi/script/showtext.py "quickpi.txt" "DOES NOT EXISTS"
+	#/home/pi/quickpi/script/showtext.py "quickpi.txt" "DOES NOT EXISTS"
 
 	exit 0
 fi
@@ -24,12 +24,12 @@ IFS=$OLDIFS
 status=$?
 set +e
 if [  "$status" -ne "0" ]; then
-	/home/pi/quickpi/script/showtext.py "quickpi.txt" "WRONG FORMAT"
+	#/home/pi/quickpi/script/showtext.py "quickpi.txt" "WRONG FORMAT"
 	sleep 5
 fi
 
 if [ -z "$SSID" ] || [ -z "$PASSWORD" ]  || [ -z "$STATICNETWORK" ]; then
-	/home/pi/quickpi/script/showtext.py "quickpi.txt" "MISING FIELDS"
+	#/home/pi/quickpi/script/showtext.py "quickpi.txt" "MISING FIELDS"
 fi
 
 
@@ -100,26 +100,26 @@ do
 		if [ "$status" -eq "0" ]; then
 			echo "done"
 		elif [ "$status" -eq "6" ]; then
-			/home/pi/quickpi/script/showtext.py "Failed to ping" "DNS ERROR"
+			#/home/pi/quickpi/script/showtext.py "Failed to ping" "DNS ERROR"
 		elif [ "$status" -eq "7" ]; then
-			/home/pi/quickpi/script/showtext.py "Failed to ping" "CANT CONNECT"
+			#/home/pi/quickpi/script/showtext.py "Failed to ping" "CANT CONNECT"
 		else
 			echo "what"
-			/home/pi/quickpi/script/showtext.py "Failed to ping" "SERVER ERROR"
+			#/home/pi/quickpi/script/showtext.py "Failed to ping" "SERVER ERROR"
 		fi
 
 		sleep 10
 
 		WIFISTATUS=$(cat /sys/class/net/wlan0/carrier)
 		if [  "$WIFISTATUS" -ne "1" ]; then
-		        /home/pi/quickpi/script/showtext.py "WIFI" "CANT CONNECT"
+		        #/home/pi/quickpi/script/showtext.py "WIFI" "CANT CONNECT"
 		else
-			/home/pi/quickpi/script/showtext.py "WIFI IP" "$MYIP"
+			#/home/pi/quickpi/script/showtext.py "WIFI IP" "$MYIP"
 		fi
 
 		sleep 10
 
-		/home/pi/quickpi/script/showtext.py "WIFI MAC $MYACPART1:" "$MYACPART2"
+		#/home/pi/quickpi/script/showtext.py "WIFI MAC $MYACPART1:" "$MYACPART2"
 	fi
 
 	sleep 30

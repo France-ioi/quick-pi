@@ -85,23 +85,45 @@
                    </tr>
 
                    <tr>
-                         <td colspan="3"><input id="staticip" type="checkbox" value="1" onclick="staticIpClicked()"> <label>Static IP configuration</label></td>
+                         <td colspan="3"><input id="staticip" type="checkbox" value="1" onclick="staticIpClicked()"> <label>Static IP configuration for WiFi</label></td>
                    </tr>
-                  <tr>
+                  <tr id="ip_row">
                         <td><label>IP address:</label></td>  <td><input type="text" id="ip" ></td>
                    </tr>
-                   <tr>
+                   <tr id="sn_row">
                         <td><label>Subnet mask:</label></td><td><input type="text" id="sn" ></td>
                    </tr>
-		   <tr>
+		   <tr id="ns_row">
 			<td><label>DNS Server:</label></td><td><input type="text" id="ns" ></td>
                    </tr>
-                   <tr>
+                   <tr id="gw_row">
                          <td><label>Default gateway:</label></td><td><input type="text" id="gw" </td>
                    </tr>
 		   <tr>
 			<td colspan="2"><hr></td>
 		   </tr>
+
+
+
+                   <tr>
+                         <td colspan="3"><input id="staticip_eth" type="checkbox" value="1" onclick="staticIpClicked_eth()"> <label>Static IP configuration for ethernet cable connection (for boards with a cable connection or external adapter)</label></td>
+                   </tr>
+
+                  <tr id="ip_eth_row">
+                        <td><label>IP address:</label></td>  <td><input type="text" id="ip_eth" ></td>
+                   </tr>
+                   <tr id="sn_eth_row">
+                        <td><label>Subnet mask:</label></td><td><input type="text" id="sn_eth" ></td>
+                   </tr>
+                   <tr id="ns_eth_row">
+                        <td><label>DNS Server:</label></td><td><input type="text" id="ns_eth" ></td>
+                   </tr>
+                   <tr id="gw_eth_row">
+                         <td><label>Default gateway:</label></td><td><input type="text" id="gw_eth" </td>
+                   </tr>
+                   <tr>
+                        <td colspan="2"><hr></td>
+                   </tr>
 
 
                    <tr>

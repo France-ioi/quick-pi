@@ -37,6 +37,17 @@ static routers=$STATICGATEWAY
 static domain_name_servers=$STATICDNS" >> /tmp/dhcpcd.conf
 fi
 
+
+if [ $STATICNETWORK_ETH -eq "1" ]; then
+        echo "Static ethernet network config"
+        echo "
+interface eth0
+static ip_address=$STATICIPADDR_ETH
+static routers=$STATICGATEWAY_ETH
+static domain_name_servers=$STATICDNS_ETH" >> /tmp/dhcpcd.conf
+fi
+
+
 /sbin/dhcpcd -n
 
 

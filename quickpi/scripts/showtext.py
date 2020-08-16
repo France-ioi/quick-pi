@@ -1,67 +1,48 @@
 #!/usr/bin/python3
 
-exit(0)
-
 import RPi.GPIO as GPIO
 import time
 import smbus
-import math
-import pigpio 
 import sys
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
 
-button_interrupt_enabled = {}
-button_was_pressed = {}
-servo_object = {}
-servo_last_value = {}
+from luma.core.interface.serial import i2c
+from luma.core.render import canvas
+from luma.oled.device import ssd1306
+from PIL import Image, ImageDraw, ImageFont
 
-screenLine1 = None
-screenLine2 = None
+screenwidth = 128
+screenheight = 32
 
-pi = pigpio.pi()
+RESET=21
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(RESET, GPIO.OUT)
+GPIO.output(RESET, 0)
+time.sleep(0.01)
+GPIO.output(RESET, 1)
 
-def displayText(line1, line2=""):
-	global screenLine1
-	global screenLine2
-	
-	if line1 == screenLine1 and line2 == screenLine2:
-		return
+serial = i2c(port=1, address=0x3C)
+device = ssd1306(serial, width=128, height=32)
+device.cleanup = lambda _: True
 
-	screenLine1 = line1
-	screenLine2 = line2
 
-	address = 0x3e
-	bus = smbus.SMBus(1)
+oledimage = Image.new('1', (128, 32))
+draw = ImageDraw.Draw(oledimage)
+oledfont = ImageFont.load_default()
 
-	bus.write_byte_data(address, 0x80, 0x01) #clear
-	time.sleep(0.05)
-	bus.write_byte_data(address, 0x80, 0x08 | 0x04) # display on, no cursor
-	bus.write_byte_data(address, 0x80, 0x28) # two lines
-	time.sleep(0.05)
+def displayText(line1, line2, line3):
+	draw.rectangle((0, 0, screenwidth - 1, screenheight - 1), outline=0, fill=0)
+	draw.text((0, 0), line1, font=oledfont, fill=255)
+	draw.text((0, 11), line2, font=oledfont, fill=255)
+	draw.text((0, 21), line3, font=oledfont, fill=255)
 
-	# This will allow arguments to be numbers
-	line1 = str(line1)
-	line2 = str(line2)
+	device.display(oledimage)
 
-	count = 0
-	for c in line1:
-		bus.write_byte_data(address, 0x40, ord(c))
-		count += 1
-		if count == 16:
-			break
-
-	bus.write_byte_data(address, 0x80, 0xc0) # Next line
-	count = 0
-	for c in line2:
-		bus.write_byte_data(address, 0x40, ord(c))
-		count += 1
-		if count == 16:
-			break
 
 
 if len(sys.argv) > 2:
-   displayText(sys.argv[1], sys.argv[2])
+   displayText(sys.argv[1], sys.argv[2], "")
 else:
-   displayText(sys.argv[1], "")
+   displayText("", sys.argv[1], "")

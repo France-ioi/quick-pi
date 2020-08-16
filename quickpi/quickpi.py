@@ -1,4 +1,3 @@
-#new
 from flask import Flask
 from flask import request
 from flask import Response
@@ -19,6 +18,7 @@ import subprocess
 import os
 import select
 import uuid
+import hashlib
 
 app = Flask(__name__)
 CORS(app)
@@ -112,13 +112,60 @@ def command_socket(ws):
 
 	currentboard = boards.detectBoard()
 
+	pythonLibrary = ""
+	hash = ""
+	try:
+		file = open("/tmp/quickpi.lib", "rb")
+		pythonLibrary = file.read()
+		file.close()
+
+		m = hashlib.md5()
+		m.update(pythonLibrary)
+		hash = m.hexdigest()
+		pythonLibrary = pythonLibrary.decode("utf-8")
+	except:
+		pass
+
+
 	message = { "command": "hello",
 		    "name": quickpiname,
 		    "board": currentboard,
-		    "version": 1 }
+		    "libraryHash": hash,
+		    "version": 2 }
 
 	ws.send(json.dumps(message))
 
+	message = ws.receive()
+	if message is not None:
+		#print("New message", message)
+		messageJson = json.loads(message)
+		if messageJson["command"] != 'pythonLib':
+			print("Unexpected command, expected pythonLib, got", messageJson["command"])
+			return
+
+		if messageJson["replaceLib"]:
+			print("Starting replacing lib...")
+			pythonLibrary = ""
+
+		while messageJson["replaceLib"]:
+			print("Got library chunk");
+			pythonLibrary = pythonLibrary + messageJson["library"]
+
+			if messageJson["last"]:
+				print("Last chunk")
+				break
+
+
+			message = ws.receive()
+			if message is None:
+				return
+
+			messageJson = json.loads(message)
+
+		if messageJson["replaceLib"]:
+			file = open("/tmp/quickpi.lib", "w")
+			file.write(pythonLibrary)
+			file.close()
 
 	write_timestamp("connection")
 
@@ -204,6 +251,8 @@ def command_socket(ws):
 				clean_install = False
 
 			startNewProcess = False
+			command_mode_library = pythonLibrary
+			messageJson["library"] = pythonLibrary
 			# Only reload the python process if we changed the python library
 			# or weren't in command mode previously
 			if (not command_mode) or (command_mode_library != messageJson["library"] or longCommand):
@@ -330,6 +379,8 @@ def command_socket(ws):
 				os.system("python3 cleanup.py")
 
 			file = open("/tmp/installedprogram.py", "w")
+			file.write(pythonLibrary)
+			file.write("\n")
 			file.write(messageJson["program"])
 			file.close()
 
@@ -598,7 +649,8 @@ def getsettings():
 
 @app.route('/reboot', methods = ['POST'])
 def reboot():
-        os.system("sudo reboot");
+	os.system("/home/pi/quickpi/scripts/showtext.py Rebooting...")
+	os.system("sudo reboot");
 
 def removewhitespace(inputstring):
 	return ''.join(inputstring.split())
@@ -615,9 +667,14 @@ def savesettings():
 	useproxy = "0"
 	useproxyuser = "0"
 	disabletunnel = "0"
+	staticnetwork_eth = "0"
+
 
 	if json["isstaticip"]:
 		staticnetwork = "1"
+
+	if json["isstaticip_eth"]:
+		staticnetwork_eth = "1"
 
 	if json["isbluetoothenabled"]:
 		bluetoothenabled = "1"
@@ -649,6 +706,15 @@ def savesettings():
 	f.write("STATICMASK=" + removewhitespace(json["sn"]) + "\r\n")
 	f.write("STATICGATEWAY=" + removewhitespace(json["gw"]) + "\r\n")
 	f.write("STATICDNS=" + removewhitespace(json["ns"]) + "\r\n")
+
+
+	f.write("STATICNETWORK_ETH=" + staticnetwork_eth + "\r\n")
+	f.write("STATICIPADDR_ETH=" + removewhitespace(json["ip_eth"]) + "\r\n")
+	f.write("STATICMASK_ETH=" + removewhitespace(json["sn_eth"]) + "\r\n")
+	f.write("STATICGATEWAY_ETH=" + removewhitespace(json["gw_eth"]) + "\r\n")
+	f.write("STATICDNS_ETH=" + removewhitespace(json["ns_eth"]) + "\r\n")
+
+
 	f.write("ENABLEBLUETOOTH=" + bluetoothenabled + "\r\n")
 	f.write("NAME=" + removewhitespace(json["qname"]) + "\r\n")
 	f.write("SCHOOL=" + removewhitespace(json["school"]) + "\r\n")
