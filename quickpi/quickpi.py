@@ -7,6 +7,9 @@ from flask import render_template
 from flask import send_from_directory
 from flask import redirect
 from flask import jsonify
+from flask import url_for
+from flask import flash
+import flask_login
 import os
 import gevent
 import json
@@ -19,9 +22,15 @@ import os
 import select
 import uuid
 import hashlib
+import secrets
 
 app = Flask(__name__)
+app.secret_key = 'FIXME do I need to change this key on the fly since the code is public???'
 CORS(app)
+
+login_manager = flask_login.LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
 
 sockets = Sockets(app)
 
@@ -452,6 +461,7 @@ def command_socket(ws):
 
 
 @app.route('/api/v1/update_image', methods=['POST'])
+@flask_login.login_required
 def upload_update_image():
 	print("upload_update_image")
 	if request.method == 'POST':
@@ -474,6 +484,7 @@ def upload_update_image():
 			return "ok"
 
 	return "fail"
+
 @sockets.route('/api/v1/update')
 def update_socket(ws):
 	message = ws.receive()
@@ -586,6 +597,7 @@ def submitAnswer(nodeid):
 
 
 @app.route('/log/<path:path>')
+@flask_login.login_required
 def syslog(path):
 	output = ""
 	if path == "syslog":
@@ -602,6 +614,7 @@ def syslog(path):
 	return output
 
 @app.route('/wifinetworks.json')
+@flask_login.login_required
 def wifi_networks():
 	process = subprocess.Popen(["bash", "-c", "sudo iwlist scan|grep ESSID| cut -d \":\" -f 2"], stdout=subprocess.PIPE)
 	(output, err) = process.communicate()
@@ -629,7 +642,21 @@ def load_settings():
 
 	return settings
 
+def save_settings(settings):
+	os.system("rm -f /tmp/temp-quickpi.txt")
+
+	f = open("/tmp/temp-quickpi.txt", "w")
+	for key in settings:
+		f.write(key + "=" + str(settings[key]) + "\r\n")
+
+	f.close()
+
+	os.system("sudo mount /boot -o rw,remount")
+	os.system("sudo cp -f /tmp/temp-quickpi.txt /boot/quickpi.txt")
+	os.system("sudo mount /boot -o ro,remount")
+
 @app.route('/getsettings.json')
+@flask_login.login_required
 def getsettings():
 	settings = load_settings()
 
@@ -648,6 +675,7 @@ def getsettings():
 
 
 @app.route('/reboot', methods = ['POST'])
+@flask_login.login_required
 def reboot():
 	os.system("/home/pi/quickpi/scripts/showtext.py Rebooting...")
 	os.system("sudo reboot");
@@ -656,11 +684,10 @@ def removewhitespace(inputstring):
 	return ''.join(inputstring.split())
 
 @app.route('/savesettings', methods = ['POST'])
+@flask_login.login_required
 def savesettings():
 	settings = load_settings()
 	json = request.get_json()
-
-	print(json)
 
 	staticnetwork = "0"
 	bluetoothenabled = "0"
@@ -668,6 +695,7 @@ def savesettings():
 	useproxyuser = "0"
 	disabletunnel = "0"
 	staticnetwork_eth = "0"
+	updatesshpass = "0"
 
 
 	if json["isstaticip"]:
@@ -688,57 +716,52 @@ def savesettings():
 	if  json["disabletunnel"]:
 		disabletunnel = "1"
 
-	os.system("sudo mount /boot -o rw,remount")
-	os.system("rm -f /tmp/temp-quickpi.txt")
-	f = open("/tmp/temp-quickpi.txt", "w")
+	if json["updatesshpass"]:
+		updatesshpass = "1"
 
-	f.write("SSID=" + json["ssid"] + "\r\n")
+	settings["SSID"] = json["ssid"]
 
-	if not json["password"].strip():
-		print(".....")
-		f.write("PASSWORD=" + settings["PASSWORD"] + "\r\n")
-	else:
-		print("----")
-		f.write("PASSWORD=" + json["password"] + "\r\n")
+	if json["password"].strip():
+		settings["PASSWORD"] = json["password"]
 
-	f.write("STATICNETWORK=" + staticnetwork + "\r\n")
-	f.write("STATICIPADDR=" + removewhitespace(json["ip"]) + "\r\n")
-	f.write("STATICMASK=" + removewhitespace(json["sn"]) + "\r\n")
-	f.write("STATICGATEWAY=" + removewhitespace(json["gw"]) + "\r\n")
-	f.write("STATICDNS=" + removewhitespace(json["ns"]) + "\r\n")
+	settings["STATICNETWORK"] = staticnetwork
+	settings["STATICIPADDR"] = removewhitespace(json["ip"])
+	settings["STATICMASK"] = removewhitespace(json["sn"])
+	settings["STATICGATEWAY"] = removewhitespace(json["gw"])
+	settings["STATICDNS"] = removewhitespace(json["ns"])
+
+	settings["STATICNETWORK_ETH"] = staticnetwork_eth
+	settings["STATICIPADDR_ETH"] = removewhitespace(json["ip_eth"])
+	settings["STATICMASK_ETH"] = removewhitespace(json["sn_eth"])
+	settings["STATICGATEWAY_ETH"] = removewhitespace(json["gw_eth"])
+	settings["STATICDNS_ETH"] = removewhitespace(json["ns_eth"])
+
+	settings["ENABLEBLUETOOTH"] = bluetoothenabled
+	settings["NAME"] = removewhitespace(json["qname"])
+	settings["SCHOOL"] = removewhitespace(json["school"])
+
+	settings["USEPROXY"] = useproxy
+	settings["USEPROXYUSER"] = useproxyuser
+	settings["PROXYADDRESS"] = removewhitespace(json["proxyaddress"])
+	settings["PROXYPORT"] = removewhitespace(json["proxyport"])
+	settings["PROXYUSER"] = removewhitespace(json["proxyuser"])
+	settings["HIDEAPPASSWORD"] = "1"
+	settings["DISABLETUNNEL"] = disabletunnel
+
+	if json["proxypassword"].strip():
+		settings["PROXYPASSWORD"] = removewhitespace(json["proxypassword"])
+
+	settings["UPDATESSHPASSWORD"] = updatesshpass
+
+	if json["systempassword"].strip():
+		settings["WEBCONFIGPASSWORD"] = removewhitespace(json["systempassword"])
 
 
-	f.write("STATICNETWORK_ETH=" + staticnetwork_eth + "\r\n")
-	f.write("STATICIPADDR_ETH=" + removewhitespace(json["ip_eth"]) + "\r\n")
-	f.write("STATICMASK_ETH=" + removewhitespace(json["sn_eth"]) + "\r\n")
-	f.write("STATICGATEWAY_ETH=" + removewhitespace(json["gw_eth"]) + "\r\n")
-	f.write("STATICDNS_ETH=" + removewhitespace(json["ns_eth"]) + "\r\n")
-
-
-	f.write("ENABLEBLUETOOTH=" + bluetoothenabled + "\r\n")
-	f.write("NAME=" + removewhitespace(json["qname"]) + "\r\n")
-	f.write("SCHOOL=" + removewhitespace(json["school"]) + "\r\n")
-
-	f.write("USEPROXY=" + useproxy + "\r\n")
-	f.write("USEPROXYUSER=" + useproxyuser + "\r\n")
-	f.write("PROXYADDRESS=" + removewhitespace(json["proxyaddress"]) + "\r\n")
-	f.write("PROXYPORT=" + removewhitespace(json["proxyport"]) + "\r\n")
-	f.write("PROXYUSER=" + removewhitespace(json["proxyuser"]) + "\r\n")
-	f.write("HIDEAPPASSWORD=1\r\n")
-	f.write("DISABLETUNNEL=" + disabletunnel + "\r\n")
-
-	if not json["proxypassword"].strip():
-		f.write("PROXYPASSWORD=" + settings["PROXYPASSWORD"] + "\r\n")
-	else:
-		f.write("PROXYPASSWORD=" + removewhitespace(json["proxypassword"]) + "\r\n")
-
-	f.close()
-
-	os.system("sudo cp -f /tmp/temp-quickpi.txt /boot/quickpi.txt")
-	os.system("sudo mount /boot -o ro,remount")
+	save_settings(settings)
 
 	print (request.get_json())
 	return "OK"
+
 
 
 @app.route('/static/<path:path>')
@@ -747,6 +770,7 @@ def send_statuc(path):
 
 
 @app.route('/')
+@flask_login.login_required
 def index():
 	return send_from_directory('.', "index.html")
 
@@ -758,6 +782,86 @@ def catch_all(path):
 	print("Trying to access ", path)
 	return redirect("http://192.168.233.3/")
 
+
+
+class User(flask_login.UserMixin):
+	pass
+
+@login_manager.user_loader
+def user_loader(id):
+	if id != 'admin':
+		return None
+
+	user = User()
+	user.id = "admin"
+	return user
+
+
+#@login_manager.request_loader
+#def request_loader(request):
+#	id = request.form.get('id')
+#	print("request_loader", id)
+#	if id is not 'admin':
+#		return
+
+#	print("request_loader", request, request.form)
+
+#	user = User()
+#	user.id = 'admin'
+#
+#	print("requesat_loader", request.form['password'])
+
+#	return user
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+	settings = load_settings()
+
+	if request.method == 'GET':
+
+		if "WEBCONFIGPASSWORD" in settings:
+			return send_from_directory('.', "login.html")
+		else:
+			return send_from_directory('.', "chgpwd.html")
+
+	if "WEBCONFIGPASSWORD" in settings:
+		print("I have a stored password")
+		if request.form['password'] == settings["WEBCONFIGPASSWORD"]:
+			user = User()
+			user.id = 'admin'
+#			user.is_authenticated = True
+
+			print("Valid password")
+			flask_login.login_user(user)
+			return redirect('/')
+		else:
+			print("Password doesn't match")
+			return redirect(url_for('login') + "?badpassword=1")
+#			return send_from_directory('.', "login.html?badpassword=1")
+	else:
+		password = request.form['password']
+		cpassword = request.form['password']
+
+		if password == cpassword:
+			settings["WEBCONFIGPASSWORD"] = password
+			save_settings(settings)
+
+			#return send_from_directory('.', "login.html")
+			return redirect(url_for('login'))
+
+	return 'Bad login'
+
+@app.route('/logout')
+def logout():
+	flask_login.logout_user()
+	flash('Logged out')
+	return redirect('/')
+
+
+@app.route('/protected')
+@flask_login.login_required
+def protected():
+	return 'Logged now'
 
 if __name__ == '__main__':
 #    app.run(debug=True, host='0.0.0.0')

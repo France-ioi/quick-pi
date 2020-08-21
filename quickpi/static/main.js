@@ -132,6 +132,8 @@ function save()
 	var disabletunnel = document.getElementById('disabletunnel').checked ? false: true;
 
 
+	var systempassword = document.getElementById('systempassword').value;
+	var updatesshpass = document.getElementById('updatesshpass').checked;
 
 	var ssid = "";
 	if (is_ssid_combo)
@@ -139,7 +141,7 @@ function save()
 		var ssidselect = document.getElementById('ssid_select');
 		ssid = ssidselect.options[ ssidselect.selectedIndex ].value;
 	} else {
-		ssid = document.getElementById('ssid_input').value;     
+		ssid = document.getElementById('ssid_input').value;
 	}
 	var password = document.getElementById('password').value;
 
@@ -160,7 +162,9 @@ function save()
 		proxyport: proxyport,
 		proxyuser: proxyuser,
 		proxypassword: proxypassword,
-		disabletunnel: disabletunnel
+		disabletunnel: disabletunnel,
+		systempassword: systempassword,
+		updatesshpass: updatesshpass,
 	};
 
 	fetch('savesettings', {
@@ -362,6 +366,25 @@ function update_now()
 	});
 }
 
+function onPasswordChange() {
+	var password = document.getElementById('systempassword');
+        var cpassword = document.getElementById('csystempassword');
+        var submit = document.getElementById('save');
+        var errolbl = document.getElementById('errorlbl');
+        var goodpassword = true;
+
+	if (password.value != cpassword.value) {
+		submit.disabled = true;
+		errolbl.innerText = "Passwords don't match";
+		goodpassword = false;
+	}
+	else {
+		submit.disabled = false;
+		errolbl.innerText = "";
+	}
+}
+
+
 function initialize()
 {
         fetch('/getsettings.json')
@@ -422,6 +445,7 @@ function initialize()
 		document.getElementById('wifimac').innerText = myJson.WIFIMAC;
 		document.getElementById('ethmac').innerText = myJson.ETHMAC;
 
+		document.getElementById('updatesshpass').checked = myJson.UPDATESSHPASSWORD == "1" ? true : false;
 
 		staticIpClicked();
 		staticIpClicked_eth();

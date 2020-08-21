@@ -1,0 +1,50 @@
+<html>
+
+	<head>
+		<title>France IOI QuickPi login</title>
+
+		 <script>
+			function onPasswordChange() {
+				var password = document.getElementById('password');
+				var cpassword = document.getElementById('cpassword');
+				var submit = document.getElementById('submit');
+				var errolbl = document.getElementById('errorlbl');
+				var goodpassword = true;
+
+				if (password.value.lenght == 0) {
+					submit.disabled = true;
+					goodpassword = false;
+					errolbl.innerText = "Password can't be empty";
+				} else {
+					if (password.value != cpassword.value) {
+						submit.disabled = true;
+						errolbl.innerText = "Passwords don't match";
+						goodpassword = false;
+					}
+				}
+
+				if (goodpassword) {
+					submit.disabled = false;
+					errolbl.innerText = "Passwords match!";
+				}
+			}
+		</script> 
+
+	</head>
+	<body>
+		<img src="static/logo.png">
+		<p>
+		<form action='login' method='POST'>
+			Please set your admin user password now
+			<p>
+			<input type='password' name='password' id='password' placeholder='password' oninput="onPasswordChange()">
+			<p>
+			<input type='password' name='cpassword' id='cpassword' placeholder='confirm password' oninput="onPasswordChange()">
+			<p>
+			<label id="errorlbl"></label>
+			<p>
+			<input type='submit' name='submit' id='submit' value="Set password">
+		</form>
+	</body>
+</html>
+

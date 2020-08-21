@@ -58,6 +58,8 @@ ABOUTQUICKPI = 10
 
 SHOWMACADDRESS = 11
 
+STARTBTMODE = 12
+
 main_menu = [ 
 ##	      { "menu" :  "Auto Test", "submenu" : 
 #			[ {"menu" : "Run", "id" :  RUNAUTOTEST } ]},
@@ -66,7 +68,8 @@ main_menu = [
 #			  {"menu" : "Tunel game", "id": TUNELGAME},
 #			  {"menu" : "Pong game", "id" : PONGGAME} ]},
 	      { "menu" : "Configuration", "submenu": 
-			[ {"menu" : "Start Access Point mode" , "id" : STARTAPMODE },
+			[ {"menu" : "Start Access Point mode", "id" : STARTAPMODE },
+			  {"menu" : "Start Bluetooth network", "id" : STARTBTMODE },
 			  {"menu" : "Show school and name", "id" : SHOWSCHOOL },
 			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS }, 
 			  {"menu" : "Show Mac Address", "id" : SHOWMACADDRESS } ]},
@@ -577,6 +580,36 @@ while True:
 					pressed = waitForButton([LEFT_PIN], False)
 					if pressed == LEFT_PIN:
 						break
+			elif menuoption == STARTBTMODE:
+				bluetoothon = False
+				try:
+					bluetoothon = settings["ENABLEBLUETOOTH"] == "1"
+				except:
+					pass
+
+				if bluetoothon:
+					drawMenu("BT network", "Bluetooth already on", False)
+					while True:
+						pressed = waitForButton([LEFT_PIN], False)
+						if pressed == LEFT_PIN:
+							break
+					continue
+
+				else:
+					drawMenu("BT network", "Connect: " + settings["NAME"],  False)
+
+					os.system("/home/pi/quickpi/scripts/startbluetooth.sh start &")
+
+					while True:
+						drawLoading()
+						time.sleep(0.05)
+						pressed = waitForButton([LEFT_PIN], False)
+						if pressed == LEFT_PIN:
+							currentMenu = menuStack.pop()
+							currentTitle = titleStack.pop()
+							os.system("/home/pi/quickpi/scripts/startbluetooth.sh stop &")
+							break
+
 
 
 

@@ -1,0 +1,33 @@
+<html>
+	<head>
+		<title>France IOI QuickPi login</title>
+
+                 <script>
+			function initialize() {
+				const queryString = window.location.search;
+				const urlParams = new URLSearchParams(queryString);
+
+				if (urlParams.get('badpassword')) {
+					var errolbl = document.getElementById('errorlbl');
+					errolbl.innerText = "Password is incorrect";
+				}
+			}
+                </script>
+
+	</head>
+	<body onload="initialize()">
+		<img src="static/logo.png">
+		<p>
+		<form action='login' method='POST'>
+			<label id="errorlbl"></label>
+			<p>
+			Please login:
+			<p>
+			<input type="hidden" id="id" name="id" value="admin"> 
+			<input type='password' name='password' id='password' placeholder='password'>
+			<p>
+			<input type='submit' name='submit' value="Login">
+		</form>
+	</body>
+</html>
+

@@ -16,6 +16,11 @@ IFS=$OLDIFS
 
 /home/pi/quickpi/scripts/runserver.sh
 
+
+if [ "$UPDATESSHPASSWORD" == "1" ]; then
+	echo -e "$WEBCONFIGPASSWORD\n$WEBCONFIGPASSWORD" | sudo passwd pi
+fi
+
 if [ -f "/mnt/data/installedprogram.py" ]; then
 
 	set +e
@@ -35,7 +40,9 @@ fi
 
 su - pi -c "/home/pi/quickpi/scripts/ping.sh &"
 
-/home/pi/quickpi/scripts/startbluetooth.sh &
+if [ $ENABLEBLUETOOTH == "1" ]; then
+	/home/pi/quickpi/scripts/startbluetooth.sh start&
+fi
 
 
 #pigpiod -x -1

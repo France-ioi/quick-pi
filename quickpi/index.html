@@ -77,7 +77,7 @@
                           </td>
                  </tr>
                   <tr>
-                        <td><label>Password:</label></td><td><input type="password" id="password"></td>
+                        <td><label>Password:</label></td><td><input type="password" id="password" autocomplete=new-password></td>
 		  </tr>
 
                    <tr>
@@ -159,16 +159,34 @@
                          <td colspan="3"><input id="disabletunnel" type="checkbox" value="1"> <label>Connect through France-ioi servers</label></td>
                    </tr>
 
+                   <tr>
+                        <td colspan="2"><hr></td>
+                   </tr>
+
                   <tr>
-			<td colspan="3"><button type="button" onclick="save()">Save settings</button></td> 
+                        <td><label>Web config Password:</label></td><td><input type="password" id="systempassword" oninput="onPasswordChange()" autocomplete=new-password> (Leaving this empty will keep current password)</td>
+                  </tr>
+                  <tr>
+                        <td><label>Confirm Password:</label></td><td><input type="password" id="csystempassword" oninput="onPasswordChange()" autocomplete=new-password></td>
+                  </tr>
+		  <tr>
+			<td colspan="3"><label style='color: red;' id="errorlbl"></label></td>
+		  </tr>
+
+                   <tr>
+                         <td colspan="3"><input id="updatesshpass" type="checkbox" value="1" onclick="staticIpClicked()"> <label>Update ssh password to web password</label></td>
+                   </tr>
+                   <tr>
+                        <td colspan="2"><hr></td>
+                   </tr>
+                  <tr>
+			<td colspan="3"><button id='save' type="button" onclick="save()">Save settings</button></td> 
                    </tr>
 
 
                    <tr>
                         <td colspan="2"><hr></td>
                    </tr>
-
-
 
                    <tr>
                          <td colspan="3"><label>WiFi MAC Adress: </label> <label id="wifimac"></label></td>
@@ -216,6 +234,10 @@
 			</p>
                 </div>
         </div>
+
+	<div>
+	<a href="/logout">Logout</a>
+	</div>
 
 </body>
 </html>
