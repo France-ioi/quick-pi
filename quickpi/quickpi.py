@@ -23,9 +23,12 @@ import select
 import uuid
 import hashlib
 import secrets
+import sys
+sys.path.append('scripts/')
+import configlib
 
 app = Flask(__name__)
-app.secret_key = 'FIXME do I need to change this key on the fly since the code is public???'
+app.secret_key = os.urandom(24).hex()
 CORS(app)
 
 login_manager = flask_login.LoginManager()
@@ -626,39 +629,10 @@ def wifi_networks():
 
 	return json.dumps(parts)
 
-def load_settings():
-	settings = {}
-	with open("/boot/quickpi.txt") as quickpiconfigfile:
-		for line in quickpiconfigfile:
-			if line[0] == '#':
-				continue
-
-			name, value = line.partition("=")[::2]
-			name = name.strip()
-			value = value.strip()
-			if not name:
-				continue
-			settings[name] = value
-
-	return settings
-
-def save_settings(settings):
-	os.system("rm -f /tmp/temp-quickpi.txt")
-
-	f = open("/tmp/temp-quickpi.txt", "w")
-	for key in settings:
-		f.write(key + "=" + str(settings[key]) + "\r\n")
-
-	f.close()
-
-	os.system("sudo mount /boot -o rw,remount")
-	os.system("sudo cp -f /tmp/temp-quickpi.txt /boot/quickpi.txt")
-	os.system("sudo mount /boot -o ro,remount")
-
 @app.route('/getsettings.json')
 @flask_login.login_required
 def getsettings():
-	settings = load_settings()
+	settings = configlib.load_settings()
 
 	process = subprocess.Popen(["/home/pi/quickpi/scripts/getmac.sh", "wlan0"], stdout=subprocess.PIPE)
 	(output, err) = process.communicate()
@@ -686,7 +660,7 @@ def removewhitespace(inputstring):
 @app.route('/savesettings', methods = ['POST'])
 @flask_login.login_required
 def savesettings():
-	settings = load_settings()
+	settings = configlib.load_settings()
 	json = request.get_json()
 
 	staticnetwork = "0"
@@ -757,7 +731,7 @@ def savesettings():
 		settings["WEBCONFIGPASSWORD"] = removewhitespace(json["systempassword"])
 
 
-	save_settings(settings)
+	configlib.save_settings(settings)
 
 	print (request.get_json())
 	return "OK"
@@ -815,7 +789,7 @@ def user_loader(id):
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
-	settings = load_settings()
+	settings = configlib.load_settings()
 
 	if request.method == 'GET':
 
@@ -826,25 +800,23 @@ def login():
 
 	if "WEBCONFIGPASSWORD" in settings:
 		print("I have a stored password")
-		if request.form['password'] == settings["WEBCONFIGPASSWORD"]:
+		if configlib.validate_password(request.form['password']):
 			user = User()
 			user.id = 'admin'
-#			user.is_authenticated = True
 
-			print("Valid password")
+			#print("Valid password")
 			flask_login.login_user(user)
 			return redirect('/')
 		else:
-			print("Password doesn't match")
+			#print("Password doesn't match")
 			return redirect(url_for('login') + "?badpassword=1")
-#			return send_from_directory('.', "login.html?badpassword=1")
 	else:
 		password = request.form['password']
 		cpassword = request.form['password']
 
 		if password == cpassword:
 			settings["WEBCONFIGPASSWORD"] = password
-			save_settings(settings)
+			configlib.save_settings(settings)
 
 			#return send_from_directory('.', "login.html")
 			return redirect(url_for('login'))

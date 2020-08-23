@@ -10,6 +10,7 @@ import subprocess
 import os
 import argparse
 import pigpio
+import configlib
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--asktocancel', action='store')
@@ -115,23 +116,6 @@ def changePassiveBuzzerState(pin, state):
 		GPIO.setup(pin, GPIO.OUT)
 		GPIO.output(pin, GPIO.LOW)
 
-def load_settings():
-	settings = {}
-	with open("/boot/quickpi.txt") as quickpiconfigfile:
-		for line in quickpiconfigfile:
-			if line[0] == '#':
-				continue
-
-			name, value = line.partition("=")[::2]
-			name = name.strip()
-			value = value.strip()
-			if not name:
-				continue
-			settings[name] = value
-
-	return settings
-
-
 
 serial = i2c(port=1, address=0x3C)
 device = ssd1306(serial, width=128, height=32)
@@ -144,7 +128,7 @@ oledimage = Image.new('1', (128, 32))
 draw = ImageDraw.Draw(oledimage)
 oledfont = ImageFont.load_default()
 
-settings = load_settings()
+settings = configlib.load_settings()
 
 
 logo = Image.open("/home/pi/quickpi/scripts/franceio.png").convert("1")
@@ -335,7 +319,7 @@ while True:
 #			currentMenu = None
 
 			if menuoption == STARTAPMODE:
-				settings = load_settings()
+				settings = configlib.load_settings()
 				showPassword = True
 				try:
 					if settings["HIDEAPPASSWORD"] == "1":
@@ -366,7 +350,7 @@ while True:
 
 
 			elif menuoption == SHOWSCHOOL:
-				settings = load_settings()
+				settings = configlib.load_settings()
 				drawMenu(settings["SCHOOL"], settings["NAME"], False)
 				pressed = waitForButton([LEFT_PIN], False)
 				while True:
