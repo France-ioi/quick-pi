@@ -612,6 +612,9 @@ def syslog(path):
 	elif path == "journalctl":
 		process = subprocess.Popen(["journalctl"], stdout=subprocess.PIPE)
 		(output, err) = process.communicate()
+	elif path == "wifidebug":
+		process = subprocess.Popen("wpa_cli scan; ifconfig; iwconfig; iwlist scan; sudo cat /etc/wpa_supplicant/wpa_supplicant.conf; wpa_cli scan_results; cat /boot/quickpi.txt", stdout=subprocess.PIPE, shell=True)
+		(output, err) = process.communicate()
 
 
 	return output
@@ -655,7 +658,10 @@ def reboot():
 	os.system("sudo reboot");
 
 def removewhitespace(inputstring):
-	return ''.join(inputstring.split())
+	if inputstring:
+		return ''.join(inputstring.split())
+
+	return ""
 
 @app.route('/savesettings', methods = ['POST'])
 @flask_login.login_required
@@ -790,13 +796,21 @@ def user_loader(id):
 @app.route('/login', methods=['GET', 'POST'])
 def login():
 	settings = configlib.load_settings()
+	skippwdset = request.args.get('skippwdset')
+
+	print("skippwdset", skippwdset)
 
 	if request.method == 'GET':
-
 		if "WEBCONFIGPASSWORD" in settings:
 			return send_from_directory('.', "login.html")
 		else:
-			return send_from_directory('.', "chgpwd.html")
+			if skippwdset:
+				user = User()
+				user.id = 'admin'
+				flask_login.login_user(user)
+				return redirect('/')
+			else:
+				return send_from_directory('.', "chgpwd.html")
 
 	if "WEBCONFIGPASSWORD" in settings:
 		print("I have a stored password")

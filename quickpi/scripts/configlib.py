@@ -35,7 +35,7 @@ def save_settings(settings):
 	f.close()
 
 	os.system("sudo mount /boot -o rw,remount")
-	os.system("sudo cp -f /tmp/temp-quickpi.txt /boot/quickpi.txt")
+	os.system("sudo mv -f /tmp/temp-quickpi.txt /boot/quickpi.txt")
 	os.system("sudo mount /boot -o ro,remount")
 
 def hash_password(password):

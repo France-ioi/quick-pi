@@ -70,7 +70,7 @@ main_menu = [
 #			  {"menu" : "Pong game", "id" : PONGGAME} ]},
 	      { "menu" : "Configuration", "submenu": 
 			[ {"menu" : "Start Access Point mode", "id" : STARTAPMODE },
-			  {"menu" : "Start Bluetooth network", "id" : STARTBTMODE },
+			  {"menu" : "Start BT network", "id" : STARTBTMODE },
 			  {"menu" : "Show school and name", "id" : SHOWSCHOOL },
 			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS }, 
 			  {"menu" : "Show Mac Address", "id" : SHOWMACADDRESS } ]},

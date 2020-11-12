@@ -16,7 +16,8 @@ IFS=$OLDIFS
 
 /home/pi/quickpi/scripts/runserver.sh
 
-/home/pi/quickpi/scrtips/updatesystempass.py
+sudo /home/pi/quickpi/scripts/updatesystempass.py
+
 if [ -f "/mnt/data/installedprogram.py" ]; then
 
 	set +e

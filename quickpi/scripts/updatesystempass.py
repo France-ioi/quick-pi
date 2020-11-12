@@ -2,6 +2,7 @@
 import subprocess
 import configlib
 import hashlib
+import os
 
 def setPassword(userName:str, password:str):
 	p = subprocess.Popen([ "/usr/sbin/chpasswd" ], universal_newlines=True, shell=False, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -48,4 +49,7 @@ if havepassword and password:
 		configlib.save_settings(settings)
 
 		if updatepassword:
+			print("Chganging system password to " + password)
+			os.system("sudo mount / -o rw,remount")
 			setPassword("pi", password)
+			os.system("sudo mount / -o ro,remount")

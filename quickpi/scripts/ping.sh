@@ -15,7 +15,7 @@ OLDIFS=$IFS
 IFS="="
 while read -r name value; do
         if [ -n "$name" ] && [[ "$name" != "#"* ]]; then
-                echo "Content of $name is ${value//\"/}"
+                #echo "Content of $name is ${value//\"/}"
                 export "$name"="$value"
         fi
 done < /tmp/quickpi.txt
@@ -28,9 +28,9 @@ if [  "$status" -ne "0" ]; then
 	sleep 5
 fi
 
-if [ -z "$SSID" ] || [ -z "$PASSWORD" ]  || [ -z "$STATICNETWORK" ]; then
-	#/home/pi/quickpi/script/showtext.py "quickpi.txt" "MISING FIELDS"
-fi
+#if [ -z "$SSID" ] || [ -z "$PASSWORD" ]  || [ -z "$STATICNETWORK" ]; then
+#	/home/pi/quickpi/script/showtext.py "quickpi.txt" "MISING FIELDS"
+#fi
 
 
 if [ "$DISABLEPING" -eq "1" ]; then
@@ -87,35 +87,35 @@ do
 	-F "school_password=$SCHOOLPASSWORD" \
 	  http://www.france-ioi.org/QuickPi/ping.php
 
-	echo $(hostname -I)
-	echo $(ifconfig)
-	echo $(iwconfig)
-	echo "-----------------------------------------"
+	#echo $(hostname -I)
+	#echo $(ifconfig)
+	#echo $(iwconfig)
+	#echo "-----------------------------------------"
 
 	status=$?
 
 
 	## Show status only when there hasn't been any connections
 	if [ ! -f "/tmp/time-connection" ]; then
-		if [ "$status" -eq "0" ]; then
-			echo "done"
-		elif [ "$status" -eq "6" ]; then
+		#if [ "$status" -eq "0" ]; then
+			#echo "done"
+		#elif [ "$status" -eq "6" ]; then
 			#/home/pi/quickpi/script/showtext.py "Failed to ping" "DNS ERROR"
-		elif [ "$status" -eq "7" ]; then
+		#elif [ "$status" -eq "7" ]; then
 			#/home/pi/quickpi/script/showtext.py "Failed to ping" "CANT CONNECT"
-		else
-			echo "what"
+		#else
+			#echo "what"
 			#/home/pi/quickpi/script/showtext.py "Failed to ping" "SERVER ERROR"
-		fi
+		#fi
 
 		sleep 10
 
 		WIFISTATUS=$(cat /sys/class/net/wlan0/carrier)
-		if [  "$WIFISTATUS" -ne "1" ]; then
+		#if [  "$WIFISTATUS" -ne "1" ]; then
 		        #/home/pi/quickpi/script/showtext.py "WIFI" "CANT CONNECT"
-		else
+		#else
 			#/home/pi/quickpi/script/showtext.py "WIFI IP" "$MYIP"
-		fi
+		#fi
 
 		sleep 10
 

@@ -117,6 +117,16 @@ function save()
 	var sn = document.getElementById('sn').value;
 	var gw = document.getElementById('gw').value;
 	var ns = document.getElementById('ns').value;
+
+
+        var isstaticip_eth = document.getElementById('staticip_eth').checked;
+
+        var ip_eth = document.getElementById('ip_eth').value;
+        var sn_eth = document.getElementById('sn_eth').value;
+        var gw_eth = document.getElementById('gw_eth').value;
+        var ns_eth = document.getElementById('ns_eth').value;
+
+
 	var isbluetoothenabled = document.getElementById('bluetooth').checked;
 
 	var school = document.getElementById('school').value;
@@ -151,6 +161,13 @@ function save()
 		ns: ns,
 		gw: gw,
 		isstaticip: isstaticip,
+
+                ip_eth: ip_eth,
+                sn_eth: sn_eth,
+                ns_eth: ns_eth,
+                gw_eth: gw_eth,
+                isstaticip_eth: isstaticip_eth,
+
 		ssid: ssid,
 		password: password,
 		isbluetoothenabled : isbluetoothenabled,
@@ -250,6 +267,13 @@ function getlog_journalctl()
 {
 	get_log("journalctl");
 }
+
+function getlog_wifidebug()
+{
+        get_log("wifidebug");
+}
+
+
 
 function uploadArrayBufferRawImage(url, arraybuffer, progress, done)
 {
@@ -452,10 +476,6 @@ function initialize()
 		proxyClicked();
 
 		//document.getElementById('proxypass').value = myJson.;
-
-
-
-
             });
 
 	openTab(event, 'config');
