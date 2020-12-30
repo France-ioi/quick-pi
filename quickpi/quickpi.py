@@ -24,6 +24,8 @@ import uuid
 import hashlib
 import secrets
 import sys
+import shutil
+
 sys.path.append('scripts/')
 import configlib
 
@@ -78,6 +80,20 @@ def write_timestamp(type):
 	file.close()
 
 
+def detect_board():
+	c = pexpect.spawnu('/usr/bin/python3 -i boards.py')
+	c.delaybeforesend = None
+	c.expect('>>>')
+	c.sendline("detectBoard()")
+	c.expect('>>>')
+	output = c.before.split("\n", 1)
+	result = output[1].strip()
+
+	result = result.replace("'", "")
+
+	return result
+
+
 
 @sockets.route('/api/v1/commands')
 def command_socket(ws):
@@ -93,6 +109,7 @@ def command_socket(ws):
 	command_mode_library = ""
 	clean_install = True
 	messageArray = None
+	hasDetectionLib = False
 
 	print (".")
 	message = ws.receive()
@@ -116,13 +133,29 @@ def command_socket(ws):
 			ws.send(json.dumps(message))
 			return
 
+		if "detectionLib" in messageJson:
+			print("Has detection lib included")
+			hasDetectionLib = True
+			file = open("/tmp/boards.py", "w")
+			file.write(messageJson["detectionLib"])
+			file.close()
+
+
 	quickpiname = "quickpi"
 	try:
 		quickpiname = os.environ['NAME']
 	except:
 		pass
 
-	currentboard = boards.detectBoard()
+	if not hasDetectionLib:
+		try:
+			os.remove('/tmp/boards.py')
+			shutil.copy('boards.py', '/tmp/boards.py')
+		except:
+			pass
+
+	currentboard = detect_board()
+	print("Detected board", currentboard)
 
 	pythonLibrary = ""
 	hash = ""
