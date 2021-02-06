@@ -4,6 +4,32 @@ function initTask(subTask) {
         hideSaveOrLoad: false,
         actionDelay: 0,
 
+        conceptViewer: [
+            'base',
+            'quickpi_buzzer',
+            'quickpi_wait',
+            'quickpi_start',
+            'quickpi_validation',
+            'quickpi_led',
+            'quickpi_wait',
+            'quickpi_buzzer',
+            'quickpi_button',
+            'quickpi_screen',
+            'quickpi_draw',
+            'quickpi_range',
+            'quickpi_servo',
+            'quickpi_thermometer',
+            'quickpi_light_sensor',
+            'quickpi_accelerometer',
+            'quickpi_microphone',
+            'quickpi_cloud',
+            'extra_nested_repeat',
+            'extra_variable',
+            'extra_list',
+            'extra_function'
+        ],
+
+
         includeBlocks: {
             groupByCategory: true,
             generatedBlocks: {
@@ -25,7 +51,6 @@ function initTask(subTask) {
                             "currentTime", 
                             "setBuzzerState",
                             "setBuzzerNote",
-                            "getTemperature", 
                             "drawPoint", 
                             "clearScreen",
                             "drawLine",
