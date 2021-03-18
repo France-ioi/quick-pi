@@ -44,7 +44,8 @@ def getIrReceiver(waittime, expected):
 
 	return True
 
-expected_i2c = [0x1d, 0x1e, 0x29,0x3c, 0x48, 0x68]
+#expected_i2c = [0x1d, 0x1e, 0x29,0x3c, 0x48, 0x68]
+expected_i2c = [0x29,0x3c, 0x48, 0x68]
 
 def listi2cDevices():
 	#Set the screen pin high so that the screen can be detected
@@ -69,7 +70,27 @@ def listi2cDevices():
 
 def testI2cDevices():
 	global expected_i2c
-	return listi2cDevices() == expected_i2c
+#	has_base_devices =  listi2cDevices() == expected_i2c
+
+	i2c_devices = listi2cDevices()
+
+	for dev in expected_i2c:
+		if dev not in i2c_devices:
+			print("Didn't found all i2c  devices")
+			return False
+
+	if (0x1d in i2c_devices) and (0x1e in i2c_devices):
+		print("Has standalone mag")
+		return True # Already has an standalone  mag
+
+	## We don't have a standalone magnetometer,check if this is a bmx160 with mag
+	bus = smbus.SMBus(1)
+	bmxchipid = bus.read_i2c_block_data(0x68, 0x00, 1)
+	print("Bmx chip id is", bmxchipid, type(bmxchipid))
+	print(bmxchipid[0] == 216)
+
+	return bmxchipid[0] == 216
+
 
 
 def testDistanceVL53l0x(up):
@@ -140,14 +161,10 @@ def testBuzzer():
 	start = time.time()
 	while time.time() - start < 1:
 		changePassiveBuzzerState(12, 1)
-		soundon = getAverageSoundLevel(0.5)
+		soundon = getAverageSoundLevel(0.05)
 		changePassiveBuzzerState(12, 0)
-		soundoff = getAverageSoundLevel(0.5)
-
-		print("sound on", soundon, "sound off", soundoff, "diff", soundon - soundoff)
-	
-		if (soundon - soundoff) < 100:
-			print("Failed: diff", soundon - soundoff)
+		soundoff = getAverageSoundLevel(0.05)
+		if (soundon - soundoff) < 1:
 			return False
 
 	return True
@@ -157,7 +174,6 @@ def testButtons():
 	buttons_expected = [7, 8, 9, 10, 11, 26]
 	buttons_already_pressed = []
 	cleared = False
-
 
 	while True:
 		how_many_pressed = 0
@@ -178,15 +194,6 @@ def testButtons():
 					fill(0)
 					noStroke()
 					drawRectangle(0, 0, 127, 31)
-
-					stroke(1)
-					drawCircle(17, 15, 6)
-					drawCircle(28, 15, 6)
-					drawCircle(17, 25, 6)
-					drawCircle(17, 6, 6)
-					drawCircle(6, 15, 6)
-					drawCircle(50, 15, 6)
-
 					fill(1)
 					cleared = True
 
@@ -202,13 +209,6 @@ def testButtons():
 					drawCircle(6, 15, 6)
 				elif button_pressed == 26:  #Button2
 					drawCircle(50, 15, 6)
-
-				noStroke()
-				fill(0)
-				drawRectangle(80, 0, 128 - 80, 31)
-				fill(1)
-				stroke(1)
-				displayTextOledAtPos(str(len(buttons_already_pressed)) + "/6", 80, 5)
 
 		if buttons_already_pressed == buttons_expected:
 			return True
@@ -236,14 +236,14 @@ def waitForBoard():
 	while True:
 		i2c_devices = listi2cDevices()
 		if len(i2c_devices) > 0:
-			if expected_i2c == i2c_devices:
-				return
-			else:
-				print("board is missing devices", list(set(expected_i2c) - set(i2c_devices)))
-				if 60 in i2c_devices:
-					displayTextOled("Missing device:", str(list(set(expected_i2c) - set(i2c_devices))))
 
-		time.sleep(0.5)
+			for dev in expected_i2c:
+				if dev not in i2c_devices:
+					print("Did not found", dev)
+					time.sleep(0.5)
+					break
+
+			return
 
 def waitForBoardRemoved(string):
 	global expected_i2c
