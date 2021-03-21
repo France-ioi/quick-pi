@@ -161,9 +161,10 @@ def testBuzzer():
 	start = time.time()
 	while time.time() - start < 1:
 		changePassiveBuzzerState(12, 1)
-		soundon = getAverageSoundLevel(0.05)
+		soundon = getAverageSoundLevel(0.5)
 		changePassiveBuzzerState(12, 0)
-		soundoff = getAverageSoundLevel(0.05)
+		soundoff = getAverageSoundLevel(0.5)
+		print("soundon", soundon, "soundoff", soundoff)
 		if (soundon - soundoff) < 1:
 			return False
 
@@ -194,6 +195,15 @@ def testButtons():
 					fill(0)
 					noStroke()
 					drawRectangle(0, 0, 127, 31)
+
+					stroke(1)
+					drawCircle(17, 15, 6)
+					drawCircle(28, 15, 6)
+					drawCircle(17, 25, 6)
+					drawCircle(17, 6, 6)
+					drawCircle(6, 15, 6)
+					drawCircle(50, 15, 6)
+
 					fill(1)
 					cleared = True
 
@@ -209,6 +219,13 @@ def testButtons():
 					drawCircle(6, 15, 6)
 				elif button_pressed == 26:  #Button2
 					drawCircle(50, 15, 6)
+
+				noStroke()
+				fill(0)
+				drawRectangle(80, 0, 128 - 80, 31)
+				fill(1)
+				stroke(1)
+				displayTextOledAtPos(str(len(buttons_already_pressed)) + "/6", 80, 5)
 
 		if buttons_already_pressed == buttons_expected:
 			return True

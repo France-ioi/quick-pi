@@ -497,8 +497,11 @@ def command_socket(ws):
 
 
 @app.route('/api/v1/update_image', methods=['POST'])
-@flask_login.login_required
+#@flask_login.login_required
 def upload_update_image():
+	if not flask_login.current_user.is_authenticated:
+		return 'Not authenticated', 403
+
 	print("upload_update_image")
 	if request.method == 'POST':
 		print("Its a post!")
@@ -697,8 +700,12 @@ def removewhitespace(inputstring):
 	return ""
 
 @app.route('/savesettings', methods = ['POST'])
-@flask_login.login_required
+#@flask_login.login_required
 def savesettings():
+	if not flask_login.current_user.is_authenticated:
+		return 'Not authenticated', 403
+
+
 	settings = configlib.load_settings()
 	json = request.get_json()
 
