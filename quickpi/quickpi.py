@@ -497,11 +497,8 @@ def command_socket(ws):
 
 
 @app.route('/api/v1/update_image', methods=['POST'])
-#@flask_login.login_required
+@flask_login.login_required
 def upload_update_image():
-	if not flask_login.current_user.is_authenticated:
-		return 'Not authenticated', 403
-
 	print("upload_update_image")
 	if request.method == 'POST':
 		print("Its a post!")
@@ -636,8 +633,11 @@ def submitAnswer(nodeid):
 
 
 @app.route('/log/<path:path>')
-@flask_login.login_required
+#@flask_login.login_required
 def syslog(path):
+	if not flask_login.current_user.is_authenticated:
+		return 'Not authenticated', 403
+
 	output = ""
 	if path == "syslog":
 		process = subprocess.Popen(["logread"], stdout=subprocess.PIPE)
@@ -656,8 +656,11 @@ def syslog(path):
 	return output
 
 @app.route('/wifinetworks.json')
-@flask_login.login_required
+#@flask_login.login_required
 def wifi_networks():
+	if not flask_login.current_user.is_authenticated:
+		return 'Not authenticated', 403
+
 	process = subprocess.Popen(["bash", "-c", "sudo iwlist scan|grep ESSID| cut -d \":\" -f 2"], stdout=subprocess.PIPE)
 	(output, err) = process.communicate()
 
@@ -688,8 +691,11 @@ def getsettings():
 
 
 @app.route('/reboot', methods = ['POST'])
-@flask_login.login_required
+#@flask_login.login_required
 def reboot():
+	if not flask_login.current_user.is_authenticated:
+		return 'Not authenticated', 403
+
 	os.system("/home/pi/quickpi/scripts/showtext.py Rebooting...")
 	os.system("sudo reboot");
 

@@ -219,6 +219,8 @@ function get_wifinetworks()
                 var ssidselect = document.getElementById('ssid_select');
                 document.getElementById("ssid_input").style.display = "none";
                 document.getElementById("ssid_select").style.display = "block";
+		document.getElementById("enter_manually").style.display = "block";
+
                 is_ssid_combo = true;
 
                 for(var i = ssidselect.options.length - 1 ; i >= 0 ; i--)
@@ -236,19 +238,31 @@ function get_wifinetworks()
             });
 }
 
+function wifi_gomanual()
+{
+	document.getElementById("ssid_input").style.display = "block";
+	document.getElementById("ssid_select").style.display = "none";
+	document.getElementById("enter_manually").style.display = "none";
+}
 
 
 function get_log(logfile)
 {
+	var textarea = document.getElementById(logfile + "_area");
+
 	fetch("/log/" + logfile)
 		.then((response) => {
-			return response.text();
+			if (response.status == 200)
+				return response.text();
+			else
+			{
+				textarea.value = "Error fetching log file, please try refreshing this page";
+			}
 		})
 		.then((data) => {
 
-			var textarea = document.getElementById(logfile + "_area");
-
-			textarea.value = data;
+			if (data)
+				textarea.value = data;
 		});
 
 }
@@ -304,8 +318,9 @@ function downloadFile(url, progress, done)
 
 	req.open("GET", url, true);
 	req.addEventListener("progress", function (evt) {
-		console.log("progress");
-		if(evt.lengthComputable) {
+		console.log("progress", evt);
+		//if(evt.lengthComputable)
+		{
 			var percentComplete = evt.loaded / evt.total;
 			progress(percentComplete);
 		}
@@ -343,6 +358,7 @@ function update_now()
 	textarea.value = "Checking for updates...";
 
 	downloadFile("https://quick-pi.org/update/version",  function(percent) {
+		textarea.value += ".";
 	}, function(arrayBuffer) {
 		var version = new TextDecoder().decode(arrayBuffer);
 
@@ -351,7 +367,7 @@ function update_now()
 
 	        downloadFile("https://quick-pi.org/update/quickpi.tar.gz",  function(percent) {
 
-        	        //textarea.value = "Downloading update..." ;
+        	        textarea.value += "." ;
 
 	        }, function(arrayBuffer) {
 	                textarea.value += "\nDownloaded update";

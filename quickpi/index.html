@@ -82,6 +82,10 @@
                           <td>
                             <button type="button" onclick="get_wifinetworks()">Scan</button>
                           </td>
+                          <td>
+                            <button id="enter_manually" type="button" onclick="wifi_gomanual()" style="display: none;">Enter Manually</button>
+                          </td>
+
                  </tr>
                   <tr>
                         <td><label>Password:</label></td><td><input type="password" id="password" autocomplete=new-password></td>
@@ -171,7 +175,7 @@
                    </tr>
 
                   <tr>
-                        <td><label>Web config Password:</label></td><td><input type="password" id="systempassword" oninput="onPasswordChange()" autocomplete=new-password> (Leaving this empty will keep current password)</td>
+                        <td><label>Web config Password:</label></td><td><input type="password" id="systempassword" oninput="onPasswordChange()" autocomplete=new-password> (Empty will keep current password)</td>
                   </tr>
                   <tr>
                         <td><label>Confirm Password:</label></td><td><input type="password" id="csystempassword" oninput="onPasswordChange()" autocomplete=new-password></td>
