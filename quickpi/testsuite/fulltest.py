@@ -20,8 +20,7 @@ def getAverageLightLevel(waittime):
 	total = 0
 	n = 0
 	while time.time() - start < waittime:
-		current = readADCADS1015(2, 1, True)
-		#print(current)
+		current = readADCADS1015(2)
 		total = total + current
 		n = n + 1
 
@@ -39,7 +38,7 @@ def getAverageSoundLevel(waittime):
 def getIrReceiver(waittime, expected):
 	start = time.time()
 	while time.time() - start < waittime:
-		if buttonStateInPort(23) != expected:
+		if isButtonPressed(23) != expected:
 			return False
 
 	return True
@@ -118,7 +117,7 @@ def testAccelerometerBMI160():
 	while time.time() - start < 0.5:
 		accel = readAccelBMI160()
 		force = accel[0] + accel[1] + accel[2]
-		if force < 0.8 and force > 1.2:
+		if force < 8.0 and force > 12.0:
 			return False
 
 	return True
@@ -131,7 +130,7 @@ def testAccelerometerLSM303C():
 		accel = reaAccelerometerLSM303C()
 		force = accel[0] + accel[1] + accel[2]
 		#print(force)
-		if force < 0.8 and force > 1.2:
+		if force < 8.0 and force > 12.0:
 			return False
 	return True
 
@@ -141,11 +140,11 @@ def testLeds():
 		print("Blinking led in " + str(i))
 		start = time.time()
 		while time.time() - start < 0.6:
-			changeLedState(i, 1)
+			setLedState(i, 1)
 			time.sleep(0.1)
 			lighton = getAverageLightLevel(0.1)
 			#print("On", lighton)
-			changeLedState(i, 0)
+			setLedState(i, 0)
 			time.sleep(0.1)
 			lightoff = getAverageLightLevel(0.1)
 			#print("Off", lightoff)
@@ -181,7 +180,7 @@ def testButtons():
 
 		for button in buttons_expected:
 			#print("Testing", button)
-			if (buttonStateInPort(button)): 
+			if (isButtonPressed(button)): 
 				button_pressed = button
 				how_many_pressed = how_many_pressed + 1
 
@@ -284,9 +283,11 @@ def waitForBoardUp():
 		if accel == [0, 0, 0]:
 			return False
 
-		if (accel[0] <= 0.2 and accel[0] >= -0.2 and
-		    accel[1] <= 0.2 and accel[1] >= -0.2 and
-		    accel[2] <= 1.2 and accel[2] >= 0.8):
+		print("wait for up", accel)
+
+		if (abs(accel[0]) <= 1.0 and
+		    abs(accel[1]) <= 1.0 and
+		    accel[2] <= 12.0 and accel[2] >= 8.0):
 			uptimes = uptimes + 1
 		else:
 			uptimes = 0
@@ -304,17 +305,19 @@ def waitForBoardDown():
 		buzzerstate = not buzzerstate
 		changePassiveBuzzerState(12, buzzerstate)
 		accel = readAccelBMI160()
-		#print(accel)
 
 		if accel == [0, 0, 0]:
 			return False
 
-		if (accel[0] <= 0.2 and accel[0] >= -0.2 and
-		    accel[1] <= 0.2 and accel[1] >= -0.2 and
-		    accel[2] >= -1.2 and accel[2] <= -0.8):
+		if (abs(accel[0]) <= 1.0 and
+		    abs(accel[1]) <= 1.0 and
+		    accel[2] >= -12.0 and accel[2] <= -8.0):
 			uptimes = uptimes + 1
+			print("OK")
 		else:
 			uptimes = 0
+			print("NOT OK")
+
 
 		if uptimes > 4:
 			changePassiveBuzzerState(12, False)
@@ -462,4 +465,5 @@ except Exception as e:
 	print(e)
 
 changePassiveBuzzerState(12, False)
-sleep(3)
+print("...")
+time.sleep(3)

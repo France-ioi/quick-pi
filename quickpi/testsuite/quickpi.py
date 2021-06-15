@@ -9,16 +9,22 @@ import RPi.GPIO as GPIO
 import time
 import smbus
 import math
-import pigpio 
+import pigpio
 import threading
+import argparse
 
 GPIO.setmode(GPIO.BCM)
 GPIO.setwarnings(False)
+
+led_brightness = {}
+buzzer_frequency = {}
+servo_angle = {}
 
 button_interrupt_enabled = {}
 button_was_pressed = {}
 servo_object = {}
 servo_last_value = {}
+pin_state = {}
 
 DHT11_last_value = {}
 
@@ -41,9 +47,20 @@ oledautoupdate = True
 vl53l0x = None
 
 enabledBMI160 = False
+isBMX160 = False
 enabledLSM303C = False
 
+compassOffset = None
+compassScale = None
+
+
 pi = pigpio.pi()
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--nodeid', action='store')
+args = parser.parse_args()
+nodeId = args.nodeid
+
 
 def nameToPin(name):
     for sensor in sensorTable:
@@ -80,27 +97,53 @@ def normalizePin(pin):
 
 
 def cleanupPin(pin):
-    pi.set_mode(pin, pigpio.INPUT)
+        pi.set_mode(pin, pigpio.INPUT)
 
 def changePinState(pin, state):
     pin = normalizePin(pin)
-    state = int(state)
 
-    cleanupPin(pin)
-    GPIO.setup(pin, GPIO.OUT)
-    if state:
-        GPIO.output(pin, GPIO.HIGH)
-    else:
-        GPIO.output(pin, GPIO.LOW)
+    if pin != 0:
+        state = int(state)
 
-def turnLedOn(pin=5):
+        pin_state[pin] = state
+
+        cleanupPin(pin)
+        GPIO.setup(pin, GPIO.OUT)
+        if state:
+            GPIO.output(pin, GPIO.HIGH)
+        else:
+            GPIO.output(pin, GPIO.LOW)
+
+def getPinState(pin):
+    pin = normalizePin(pin)
+    state = 0
+
+    try:
+        state = pin_state[pin]
+    except:
+        pass
+
+    return state
+
+
+def getBuzzerState(pin):
+    return getPinState(pin)
+
+def isLedOn(pin=4):
+    return getPinState(pin)
+
+def getLedState(pin):
+    return getPinState(pin)
+
+
+def turnLedOn(pin=4):
 	changePinState(pin, 1)
 
-def turnLedOff(pin=5):
+def turnLedOff(pin=4):
 	changePinState(pin, 0)
 
-def changeLedState(pin, state):
-	changePinState(pin, state)
+def setLedState(pin, state):
+    changePinState(pin, state)
 
 def toggleLedState(pin):
     pin = normalizePin(pin)
@@ -123,14 +166,14 @@ def magnetOn(pin):
 def magnetOff(pin):
   changePinState(pin, 0)
 
-def buttonStateInPort(pin):
+def isButtonPressed(pin=None):
+    if pin == None:
+        pin = "button1"
+
     pin = normalizePin(pin)
 
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
     return GPIO.input(pin)
-
-def buttonState():
-    return buttonStateInPort(22)
 
 def waitForButton(pin):
     pin = normalizePin(pin)
@@ -169,13 +212,8 @@ def buttonWasPressed(pin):
 def initVL53():
     global vl53l0x
 
-    import board
-    import busio
-    import adafruit_vl53l0x
-
     try:
-        i2c = busio.I2C(board.SCL, board.SDA)
-        vl53l0x = adafruit_vl53l0x.VL53L0X(i2c)
+        vl53l0x = VL53L0X()
     except:
         vl53l0x = None
 
@@ -272,52 +310,48 @@ def initOLEDScreen():
         from luma.oled.device import ssd1306
         from PIL import Image, ImageDraw, ImageFont
 
+        # Reset the screen
         RESET=21
         GPIO.setup(RESET, GPIO.OUT)
         GPIO.output(RESET, 0)
         time.sleep(0.01)
         GPIO.output(RESET, 1)
 
+
         serial = i2c(port=1, address=0x3C)
         oleddisp = ssd1306(serial, width=oledwidth, height=oledheight)
         oleddisp.cleanup = lambda _: True
 
         oledfont = ImageFont.load_default()
-#        oledfont = ImageFont.truetype(font="tiny.ttf", size=8)
         oledimage = Image.new('1', (oledwidth, oledheight))
         oleddraw = ImageDraw.Draw(oledimage)
 
         oleddisp.display(oledimage)
 
 # Address 0x3c
-def displayTextOled(line1, line2="", background=True):
+def displayTextOled(line1, line2=""):
     global oleddisp
     global oledfont
     global oledimage
     global oleddraw
-    
-    initOLEDScreen()  
+
+    initOLEDScreen()
 
     # This will allow arguments to be numbers
     line1 = str(line1)
-    line2 = str(line2)
 
-    if background:
-        fill = 0
+    if line2:
+        line2 = str(line2)
     else:
-        fill = 255
+        line2 = ""
 
-    oleddraw.rectangle((0, 0, oledwidth, oledheight), outline=0, fill=fill)
+    oleddraw.rectangle((0, 0, oledwidth, oledheight), outline=0, fill=0)
 
-    if background:
-        fill = 255
-    else:
-        fill = 0
-
-    oleddraw.text((0, 0), line1, font=oledfont, fill=fill)
-    oleddraw.text((0, 15), line2, font=oledfont, fill=fill)
+    oleddraw.text((0, 0), line1, font=oledfont, fill=255)
+    oleddraw.text((0, 15), line2, font=oledfont, fill=255)
 
     updateScreen()
+
 
 def displayTextOledAtPos(line1, x, y, fill=255):
     global oleddisp
@@ -376,7 +410,7 @@ def noStroke():
 def drawPoint(x, y):
     global oleddraw
     global strokecolor
-    
+
     initOLEDScreen()
 
     oleddraw.point((x, y), fill=strokecolor)
@@ -390,8 +424,8 @@ def drawText(x, y, text):
     global oledfont
     global oledimage
     global oleddraw
-    
-    initOLEDScreen()  
+
+    initOLEDScreen()
 
     # This will allow arguments to be numbers
     text = str(text)
@@ -419,7 +453,7 @@ def drawRectangle(x0, y0, width, height):
     global strokecolor
 
     initOLEDScreen()
-    oleddraw.rectangle((x0, y0, x0 + width, y0 + height), fill=fillcolor, outline=strokecolor)
+    oleddraw.rectangle((x0, y0, x0 + width - 1, y0 + height - 1), fill=fillcolor, outline=strokecolor)
 
     global oledautoupdate
     if oledautoupdate:
@@ -457,10 +491,20 @@ def clearScreen():
     if oledautoupdate:
         updateScreen()
 
+def isPointSet(x, y):
+    global oleddraw
+    global oledimage
+
+    initOLEDScreen()
+
+    pixels = oledimage.load()
+
+    return pixels[x,y] > 0
+
 def displayText16x2(line1, line2=""):
     global screenLine1
     global screenLine2
- 
+
     if line1 == screenLine1 and line2 == screenLine2:
         return
 
@@ -497,10 +541,41 @@ def displayText16x2(line1, line2=""):
 
 def setServoAngle(pin, angle):
     pin = normalizePin(pin)
-    angle = int(angle)
 
-    pulsewidth = (angle * 11.11) + 500
-    pi.set_servo_pulsewidth(pin, pulsewidth)
+    if pin != 0:
+        servo_angle[pin] = 0
+
+        angle = int(angle)
+
+        if angle < 0:
+            angle = 0
+        elif angle > 180:
+            angle = 180
+
+        pulsewidth = (angle * 11.11) + 500
+        pi.set_servo_pulsewidth(pin, pulsewidth)
+
+def getServoAngle(pin):
+    pin = normalizePin(pin)
+    angle = 0
+
+    try:
+        angle = servo_angle[pin]
+    except:
+        pass
+
+    return angle
+
+def setContinousServoDirection(pin, direction):
+    if direction > 0:
+        angle = 0
+    elif direction < 0:
+        angle = 180
+    else:
+        angle = 90
+
+    setServoAngle(pin, angle)
+
 
 def readGrovePiADC(pin):
     pin = normalizePin(pin)
@@ -522,7 +597,7 @@ def sleep(sleep_time):
 
 def reportBlockValue(id, state):
     return state
-    
+
 
 class DHT11Result:
     'DHT11 sensor result returned by DHT11.read() method'
@@ -727,7 +802,7 @@ def readTemperatureDHT11(pin):
     except:
         pass
 
-       
+
     instance = DHT11(pin=pin)
     result = instance.read()
     if result.is_valid():
@@ -738,7 +813,7 @@ def readTemperatureDHT11(pin):
         }
         return result.temperature
     elif haveold:
-        return DHT11_last_value[pin]["temperature"] 
+        return DHT11_last_value[pin]["temperature"]
 
     return 0
 
@@ -754,7 +829,7 @@ def readHumidity(pin):
     except:
         pass
 
-       
+
     instance = DHT11(pin=pin)
     result = instance.read()
     if result.is_valid():
@@ -765,7 +840,7 @@ def readHumidity(pin):
         }
         return result.humidity
     elif haveold:
-        return DHT11_last_value[pin]["humidity"] 
+        return DHT11_last_value[pin]["humidity"]
 
     return 0
 
@@ -782,6 +857,15 @@ BMI160_REGA_USR_GYR_RANGE_ADDR    = 0x43
 BMI160_REGA_CMD_CMD_ADDR          =   0x7e
 BMI160_REGA_CMD_EXT_MODE_ADDR     =   0x7f
 BMI160_REGA_TEMPERATURE           = 0x20
+
+BMX160_MAGN_CONFIG_ADDR         = (0x44)
+BMX160_MAGN_RANGE_ADDR          = (0x4B)
+BMX160_MAGN_IF_0_ADDR           = (0x4C)
+BMX160_MAGN_IF_1_ADDR           = (0x4D)
+BMX160_MAGN_IF_2_ADDR           = (0x4E)
+BMX160_MAGN_IF_3_ADDR           = (0x4F)
+BMX160_MAGN_ODR_ADDR            = (0x44)
+
 CMD_SOFT_RESET_REG      = 0xb6
 CMD_PMU_ACC_SUSPEND     = 0x10
 CMD_PMU_ACC_NORMAL      = 0x11
@@ -791,6 +875,13 @@ CMD_PMU_GYRO_SUSPEND    = 0x14
 CMD_PMU_GYRO_NORMAL     = 0x15
 CMD_PMU_GYRO_FASTSTART  = 0x17
 
+BMX160_MAGN_NORMAL_MODE               = 0x19
+BMX160_MAGN_ODR_25HZ                  = 0x06
+
+BMX160_MAGN_SUSPEND_MODE              = 0x18
+BMX160_MAGN_NORMAL_MODE               = 0x19
+BMX160_MAGN_LOWPOWER_MODE             = 0x1A
+
 BMI160_USER_DATA_14_ADDR = 0X12 # accel x
 BMI160_USER_DATA_15_ADDR = 0X13 # accel x
 BMI160_USER_DATA_16_ADDR = 0X14 # accel y
@@ -798,14 +889,50 @@ BMI160_USER_DATA_17_ADDR = 0X15 # accel y
 BMI160_USER_DATA_18_ADDR = 0X16 # accel z
 BMI160_USER_DATA_19_ADDR = 0X17 # accel z
 
-BMI160_USER_DATA_8_ADDR  = 0X0C
-BMI160_USER_DATA_9_ADDR  = 0X0D
-BMI160_USER_DATA_10_ADDR = 0X0E
-BMI160_USER_DATA_11_ADDR = 0X0F
-BMI160_USER_DATA_12_ADDR = 0X10
-BMI160_USER_DATA_13_ADDR = 0X11
+BMI160_USER_DATA_8_ADDR  = 0X0C # gyr x
+BMI160_USER_DATA_9_ADDR  = 0X0D # gyr x
+BMI160_USER_DATA_10_ADDR = 0X0E # gyr y
+BMI160_USER_DATA_11_ADDR = 0X0F # gyr y
+BMI160_USER_DATA_12_ADDR = 0X10 # gyr z
+BMI160_USER_DATA_13_ADDR = 0X11 # gyr z
+
+BMI160_USER_DATA_0_ADDR  = 0X04 # mag x
+BMI160_USER_DATA_1_ADDR  = 0X05 # mag x
+BMI160_USER_DATA_2_ADDR  = 0X06 # mag y
+BMI160_USER_DATA_3_ADDR  = 0X07 # mag y
+BMI160_USER_DATA_4_ADDR  = 0X08 # mag z
+BMI160_USER_DATA_5_ADDR  = 0X09 # mag z
+
+
+def initBMX160Mag():
+    bus = smbus.SMBus(1)
+
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMI160_REGA_CMD_CMD_ADDR, BMX160_MAGN_NORMAL_MODE)
+    time.sleep(0.00065) # datasheet says wait for 650microsec
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_0_ADDR, 0x80)
+    # put mag into sleep mode
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_3_ADDR, 0x01)
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_2_ADDR, 0x4B)
+    # set x-y to regular power preset
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_3_ADDR, 0x04)
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_2_ADDR, 0x51)
+    # set z to regular preset
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_3_ADDR, 0x0E)
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_2_ADDR, 0x52)
+    # prepare MAG_IF[1-3] for mag_if data mode
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_3_ADDR, 0x02)
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_2_ADDR, 0x4C)
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_1_ADDR, 0x42)
+    # Set ODR to 25 Hz
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_ODR_ADDR, BMX160_MAGN_ODR_25HZ)
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMX160_MAGN_IF_0_ADDR, 0x00)
+    # put in low power mode.
+    bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMI160_REGA_CMD_CMD_ADDR, BMX160_MAGN_NORMAL_MODE)
+
 
 def initBMI160():
+    global isBMX160
+
     bus = smbus.SMBus(1)
     bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMI160_REGA_USR_ACC_CONF_ADDR, 0x25)
     bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMI160_REGA_USR_ACC_RANGE_ADDR, 0x5)
@@ -820,6 +947,17 @@ def initBMI160():
     bus.write_byte_data(BMI160_DEVICE_ADDRESS, BMI160_REGA_CMD_CMD_ADDR, CMD_PMU_GYRO_NORMAL)  ## Enable Gyro
     time.sleep(0.080)
 
+    chipid = bus.read_i2c_block_data(0x68, 0x00, 1)
+
+    try:
+        isBMX160 = chipid[0] == 216
+    except:
+        pass
+
+    if isBMX160:
+        initBMX160Mag()
+    
+
 def readAccelBMI160():
     global enabledBMI160
 
@@ -827,7 +965,7 @@ def readAccelBMI160():
         if not enabledBMI160:
             enabledBMI160 = True
             initBMI160()
-        
+
         bus = smbus.SMBus(1)
         acc_value = bus.read_i2c_block_data(BMI160_DEVICE_ADDRESS, BMI160_USER_DATA_14_ADDR, 6)
         acc_x =  (acc_value[1] << 8) | acc_value[0]
@@ -843,9 +981,9 @@ def readAccelBMI160():
         if acc_z & 0x8000 != 0:
             acc_z -= 1 << 16
 
-        acc_x = float(acc_x)  / 16384.0;
-        acc_y = float(acc_y)  / 16384.0;
-        acc_z = float(acc_z) / 16384.0;
+        acc_x = float(acc_x)  / 16384.0 * 9.81;
+        acc_y = float(acc_y)  / 16384.0 * 9.81;
+        acc_z = float(acc_z) / 16384.0 * 9.81;
 
         return [round(acc_x, 1), round(acc_y, 1), round(acc_z, 1)]
     except:
@@ -900,7 +1038,6 @@ def readGyroBMI160():
 
         time = (value[14] << 16) | (value[13] << 8) | value[12]
 
-
         if x & 0x8000 != 0:
             x -= 1 << 16
 
@@ -913,11 +1050,11 @@ def readGyroBMI160():
         x = float(x)  * 0.030517578125;
         y = float(y)  * 0.030517578125;
         z = float(z)  * 0.030517578125;
-  
+
         return [x, y, z, time]
     except:
         enabledBMI160 = False
-        return [0, 0, 0, 0]
+        return [0, 0, 0]
 
 def twos_comp(val, bits):
         # Calculate the 2s complement of int:val #
@@ -945,7 +1082,7 @@ def readTemperatureBMI160(pin):
             #temp = (23.0 - ((0x10000 - temp)/512.0));
 #        else:
 #            temp = ((temp/512.0) + 23.0);
-    
+
         return temp
     except:
         enabledBMI160 = False
@@ -992,31 +1129,61 @@ def initLSM303C():
     bus.write_byte_data(ACC_I2C_ADDR, CTRL_REG1_A, 0xBF) # High resolution, 100Hz output, enable all three axis
 
 
-def readMagnetometerLSM303C():
+def readMagnetometerLSM303C(allowcalibration=True, calibratedvalues=True):
     global enabledLSM303C
+    global compassOffset
+    global compassScale
+    global enabledBMI160
+    global isBMX160
 
     try:
-        if not enabledLSM303C:
-            enabledLSM303C = True
-            initLSM303C()
+        if not enabledBMI160:
+            initBMI160()
+            enabledBMI160 = True
 
-        bus = smbus.SMBus(1) 
+        if not isBMX160:
+            if not enabledLSM303C:
+                enabledLSM303C = True
+                initLSM303C()
 
-        value = bus.read_i2c_block_data(MAG_I2C_ADDR, MAG_OUTX_L, 6)
+        if compassOffset is None or compassScale is None:
+            loadCompassCalibration()
+
+        if allowcalibration:
+            if compassOffset is None or compassScale is None:
+                calibrateCompassGame()
+
+        bus = smbus.SMBus(1)
+
+        if isBMX160:
+            value = bus.read_i2c_block_data(BMI160_DEVICE_ADDRESS, BMI160_USER_DATA_0_ADDR, 6)
+        else:
+            value = bus.read_i2c_block_data(MAG_I2C_ADDR, MAG_OUTX_L, 6)
 
         X =  twos_comp((value[1] << 8) | value[0], 16)
         Y =  twos_comp((value[3] << 8) | value[2], 16)
         Z =  twos_comp((value[5] << 8) | value[4], 16)
 
-        X = round((X + 392.5) * 5000/5887, 0)
-        Y = round((Y - 145.5) * 5000/5885, 0)
-        Z =  round((Z + 3839)* 5000/6591, 0)
+        X = X * 0.048828125
+        Y = Y * 0.048828125
+        Z = Z * 0.048828125
+
+        if (compassOffset is not None) and (compassScale is not None) and calibratedvalues:
+            X = round((X + compassOffset[0]) * compassScale[0], 0)
+            Y = round((Y + compassOffset[1]) * compassScale[1], 0)
+            Z = round((Z + compassOffset[2])* compassScale[2], 0)
 
         return [X, Y, Z]
-    except Exception as e:
-        print(e)
+    except:
         enabledLSM303C = False
         return [0, 0, 0]
+
+def computeCompassHeading():
+    values = readMagnetometerLSM303C()
+
+    heading = math.atan2(values[0],values[1])*(180/math.pi) + 180
+
+    return heading
 
 
 def reaAccelerometerLSM303C():
@@ -1027,7 +1194,7 @@ def reaAccelerometerLSM303C():
             enabledLSM303C = True
             initLSM303C()
 
-        bus = smbus.SMBus(1) 
+        bus = smbus.SMBus(1)
 
         value = bus.read_i2c_block_data(ACC_I2C_ADDR, MAG_OUTX_L, 6)
 
@@ -1035,15 +1202,15 @@ def reaAccelerometerLSM303C():
         Y =  twos_comp((value[3] << 8) | value[2], 16)
         Z =  twos_comp((value[5] << 8) | value[4], 16)
 
-        X = round(X * 0.00059814453125 / 9.8, 3)
-        Y = round(Y * 0.00059814453125 / 9.8, 3)
-        Z =  round(Z * 0.00059814453125 / 9.8, 3)
+        X = round(X * 0.00059814453125, 2)
+        Y = round(Y * 0.00059814453125, 2)
+        Z =  round(Z * 0.00059814453125, 2)
 
         return [X, Y, Z]
     except:
         enabledLSM303C = False
         return [0, 0, 0]
- 
+
 def readMagneticForce(axis):
     maneticforce = readMagnetometerLSM303C()
 
@@ -1079,26 +1246,28 @@ def readStick(pinup, pindown, pinleft, pinright, pincenter):
 
 def setInfraredState(pin, state):
     pin = normalizePin(pin)
-    state = int(state)
 
-    cleanupPin(pin)
+    if pin != 0:
+        state = int(state)
 
-    pi.set_mode(pin, pigpio.OUTPUT)
+        cleanupPin(pin)
 
-    pi.wave_clear()
-    pi.wave_tx_stop()
+        pi.set_mode(pin, pigpio.OUTPUT)
 
-    if state:
-        wf = []
+        pi.wave_clear()
+        pi.wave_tx_stop()
 
-        wf.append(pigpio.pulse(1<<pin, 0, 13))
-        wf.append(pigpio.pulse(0, 1<<pin, 13))
+        if state:
+            wf = []
 
-        pi.wave_add_generic(wf)
+            wf.append(pigpio.pulse(1<<pin, 0, 13))
+            wf.append(pigpio.pulse(0, 1<<pin, 13))
 
-        a = pi.wave_create()
+            pi.wave_add_generic(wf)
 
-        pi.wave_send_repeat(a)
+            a = pi.wave_create()
+
+            pi.wave_send_repeat(a)
 
 def changeActiveBuzzerState(pin, state):
     changePinState(pin, state)
@@ -1115,6 +1284,7 @@ def changePassiveBuzzerState(pin, state):
 
     state = int(state)
 
+    pin_state[pin] = state
     if state != laststate:
         passive_buzzer_last_value[pin] = state
         pi.set_mode(pin, pigpio.OUTPUT)
@@ -1138,7 +1308,49 @@ def changePassiveBuzzerState(pin, state):
             GPIO.output(pin, GPIO.LOW)
 
 
-def readADCADS1015(pin, gain=1, raw=False):
+
+def getBuzzerNote(pin):
+    pin = normalizePin(pin)
+    frequency = 0
+
+    try:
+        frequency = buzzer_frequency[pin]
+    except:
+        pass
+
+    return frequency
+
+
+def setLedBrightness(pin, level):
+    pin = normalizePin(pin)
+
+    if level > 1:
+        level = 1
+
+    led_brightness [pin] = level
+
+    pi.set_mode(pin, pigpio.OUTPUT)
+
+    pi.set_mode(pin, pigpio.OUTPUT)
+    pi.set_PWM_frequency(pin,1000)
+    pi.set_PWM_range(pin, 4000)
+
+    dutycycle = int(4000 * level);
+    pi.set_PWM_dutycycle(pin, dutycycle)
+
+def getLedBrightness(pin):
+    pin = normalizePin(pin)
+    level = 0
+
+    try:
+        level = led_brightness[pin]
+    except:
+        pass
+
+    return level
+
+
+def readADCADS1015(pin, gain=1):
     ADS1x15_CONFIG_GAIN = {
         2/3: 0x0000, # +/- 6.144V
         1:   0x0200, # +/- 4.096v
@@ -1204,17 +1416,16 @@ def readADCADS1015(pin, gain=1, raw=False):
 
         value = twos_comp(result[0] << 8 | result[1], 16)
 
-        if not raw:
-            max = ADS1x15_GAIN_MAX_VOLTAGE[gain];
+        max = ADS1x15_GAIN_MAX_VOLTAGE[gain];
 
-            # Normalize the value so that 0v is 0 and 3.3v is 999
-            value = value / (32768. / max  * 3.3 / 1000.)
+        # Normalize the value so that 0v is 0 and 3.3v is 999
+        value = value / (32768. / max  * 3.3 / 1000.)
 
-            if value < 0:
-                value = 0
+        if value < 0:
+            value = 0
 
-            if value > 999:
-                value = 999
+        if value > 999:
+            value = 999
     except:
         pass
 
@@ -1225,9 +1436,9 @@ def readSoundLevel(pin):
     pin = normalizePin(pin)
     max = -25000
     min = 25000
-    
-    for i in range(50):
-        val = int(readADCADS1015(pin, 8, True))
+
+    for i in range(20):
+        val = int(readADCADS1015(pin, 16))
 
         if val > max:
             max = val
@@ -1235,11 +1446,11 @@ def readSoundLevel(pin):
         if val < min:
             min = val
 
-    return max - min        
+    return max - min
 
 adcHandler = [
     {
-        "type": "grovepi", 
+        "type": "grovepi",
         "handler": readGrovePiADC
     },
     {
@@ -1264,7 +1475,7 @@ def readTemperatureGroveAnalog(pin):
     R0 = 100000.
 
     val = readADC(pin)
-    
+
     if val == 0:
         return 0
 
@@ -1282,7 +1493,7 @@ def readSoundSensor(pin):
 
 def readLightIntensity(pin):
 	return int((readADC(pin) + 1)/ 10)
-    
+
 sensorHandler = [
     {
         "type": "screen",
@@ -1339,7 +1550,7 @@ def nameToHandler(name, type):
             if handler["type"] == type and "subType" in sensor and handler["subType"] == sensor["subType"]:
                 return [sensor, handler["handler"]]
     return None
-        
+
 
 def readDistance(name):
     ret =  nameToHandler(name, "range")
@@ -1349,18 +1560,22 @@ def readDistance(name):
         handler = ret[1]
 
         return handler(name)
-    
+
     return 0
 
 
-def displayText(name, line1, line2=""):
-    ret =  nameToHandler(name, "screen")
+def displayText(line1, line2=""):
+    ret =  nameToHandler("screen1", "screen")
+    sensor =  nameToDef("screen1", "screen")
 
     if ret is not None:
         sensor = ret[0]
         handler = ret[1]
 
         return handler(line1, line2)
+
+def displayText2Lines(line1, line2=""):
+    return displayText(line1, line2)
 
 def readTemperature(name):
     ret =  nameToHandler(name, "temperature")
@@ -1370,19 +1585,67 @@ def readTemperature(name):
         handler = ret[1]
 
         return round(handler(name), 1)
-    
+
     return 0
 
 def setBuzzerState(name, state):
     ret =  nameToHandler(name, "buzzer")
 
+    pin = normalizePin(name)
+    pin_state[pin] = state
     if ret is not None:
         sensor = ret[0]
         handler = ret[1]
 
         return handler(name, state)
-    
+
     return 0
+
+def setBuzzerNote(pin, frequency):
+    pin = normalizePin(pin)
+
+    pi.set_mode(pin, pigpio.OUTPUT)
+
+    buzzer_frequency [pin] = level
+
+    pi.wave_clear()
+    pi.wave_tx_stop()
+
+    wf = []
+
+    if frequency == 0:
+        pi.wave_tx_stop()
+        GPIO.setup(pin, GPIO.OUT)
+        GPIO.output(pin, GPIO.LOW)
+    else:
+        delay = int(1000000/frequency/2)
+
+        wf.append(pigpio.pulse(1<<pin, 0, delay))
+        wf.append(pigpio.pulse(0, 1<<pin, delay))
+
+        pi.wave_add_generic(wf)
+
+        a = pi.wave_create()
+
+        pi.wave_send_repeat(a)
+
+def turnBuzzerOn(pin=12):
+    setBuzzerState("buzzer1", 1)
+
+def turnBuzzerOff(pin=12):
+    setBuzzerState("buzzer1", 0)
+
+def isBuzzerOn(pin=12):
+    pin = normalizePin(pin)
+    state = 0
+
+    try:
+        state = pin_state[pin]
+    except:
+        pass
+
+    return state
+
 
 def setBuzzerAudioOutput(value):
     if value:
@@ -1396,3 +1659,1213 @@ def getBuzzerAudioOutput():
         return 1
 
     return 0
+
+
+def dSquared(c, s):
+    dx = c[0] - s[0]
+    dy = c[1] - s[1]
+    dz = c[2] - s[2]
+
+    return (dx*dx) + (dy*dy) + (dz*dz)
+
+def measureScore(c, data):
+	minD = 0
+	maxD = 0
+
+	minD = maxD = dSquared(c, data[0])
+	for row in data[1:]:
+		d = dSquared(c, row)
+
+		if d < minD:
+			minD = d
+
+		if d > maxD:
+			maxD = d
+
+	return maxD - minD
+
+def spherify(centre, data):
+	radius = 0
+	scaleX = 0.0
+	scaleY = 0.0
+	scaleZ = 0.0
+
+	scale = 0.0
+	weightX = 0.0
+	weightY = 0.0
+	weightZ = 0.0
+
+	for row in data:
+		d = math.sqrt(dSquared(centre, row))
+
+	if d > radius:
+		radius = d
+
+	# Now, for each data point, determine a scalar multiplier for the vector between the centre and that point that
+	# takes the point onto the surface of the enclosing sphere.
+	for row in data:
+		# Calculate the distance from this point to the centre of the sphere
+		d = math.sqrt(dSquared(centre, row))
+
+		# Now determine a scalar multiplier that, when applied to the vector to the centre,
+                # will place this point on the surface of the sphere.
+		s = (radius / d) - 1
+
+		scale = max(scale, s)
+
+                # next, determine the scale effect this has on each of our components.
+		dx = (row[0] - centre[0])
+		dy = (row[1] - centre[1])
+		dz = (row[2] - centre[2])
+
+		weightX += s * abs(dx / d)
+		weightY += s * abs(dy / d)
+		weightZ += s * abs(dz / d)
+
+	wmag = math.sqrt((weightX * weightX) + (weightY * weightY) + (weightZ * weightZ))
+
+	scaleX = 1.0 + scale * (weightX / wmag)
+	scaleY = 1.0 + scale * (weightY / wmag)
+	scaleZ = 1.0 + scale * (weightZ / wmag)
+
+	scale = [0, 0, 0]
+	scale[0] = int((1024 * scaleX))
+	scale[1] = int((1024 * scaleY))
+	scale[2] = int((1024 * scaleZ))
+
+	centre[0] = centre[0]
+	centre[1] = centre[1]
+	centre[2] = centre[2]
+
+	return [scale, centre, radius]
+
+def approximateCentre(data):
+	samples = len(data)
+	centre = [0, 0, 0]
+
+	for row in data:
+		for i in range(3):
+			centre[i] = centre[i] + row[i]
+
+	for i in range(3):
+		centre[i] = int(centre[i] / samples)
+
+
+	#print("centre", centre)
+
+	c = centre
+	best = [0, 0, 0]
+	t = [0, 0,0]
+	score = measureScore(c, data)
+	#print("initial score", score)
+	CALIBRATION_INCREMENT = 10
+	while True:
+		for x in range(-CALIBRATION_INCREMENT, CALIBRATION_INCREMENT + CALIBRATION_INCREMENT, CALIBRATION_INCREMENT):
+			for y in range(-CALIBRATION_INCREMENT, CALIBRATION_INCREMENT + CALIBRATION_INCREMENT, CALIBRATION_INCREMENT):
+				for z in range(-CALIBRATION_INCREMENT, CALIBRATION_INCREMENT + CALIBRATION_INCREMENT, CALIBRATION_INCREMENT):
+					t = c
+					t[0] += x
+					t[1] += y
+					t[2] += z
+					s = measureScore(t, data)
+					#print("try", t, "score", s)
+					if (s < score):
+						score = s
+						best = t
+						print(best)
+
+
+		if (best[0] == c[0]) and (best[1] == c[1]) and (best[2] == c[2]):
+			#print("best is equal to centre", best, c)
+			break
+
+		#print(best)
+		c = best
+
+	return c
+
+
+def calibrateCompass(data):
+    centre = approximateCentre(data)
+    return spherify(centre, data)
+
+def loadCompassCalibration():
+    offset = None
+    scale = None
+    try:
+        f = open("/mnt/data/compasscalibration.txt", 'r')
+        x = f.readline()
+        f.close()
+
+        values = x.split(",")
+
+        if len(values) == 6:
+            offset = [float(values[0]), float(values[1]), float(values[2])]
+            scale = [float(values[3]), float(values[4]), float(values[5])]
+
+        if offset is not None and scale is not None:
+            global compassOffset
+            global compassScale
+
+            compassOffset = offset
+            compassScale = scale
+
+            return [offset, scale]
+    except:
+        pass
+
+    return None
+
+def saveCompassCalibration(scale, offset):
+    f = open("/mnt/data/compasscalibration.txt", "w+")
+
+    f.write(str(offset[0]) + ","
+             + str(offset[1]) + ","
+             + str(offset[2]) + ","
+             + str(scale[0]) + ","
+             + str(scale[1]) + ","
+             + str(scale[2]) + "\n")
+
+    f.close()
+
+def calibrateCompassGame():
+    n = 7
+    scale = 4
+
+    rect = [[0 for x in range(n)] for y in range(n)]
+
+    autoUpdate(False)
+
+    done = False
+    rect_offset_x = 97
+    rect_offset_y = 1
+
+    fill(1)
+    drawText(0, 0, "Rotate the board")
+
+    stroke(1)
+    fill(0)
+    drawRectangle(rect_offset_x - 1, rect_offset_y - 1, (n * scale) + 2, (n * scale) + 2)
+    updateScreen()
+
+    cursor_color = 0
+
+    data = []
+
+    start = time.time()
+    while not done and (time.time() - start) < 30:
+        magvalues =  readMagnetometerLSM303C(False, False)
+        if isBMX160:
+            accelvalues = readAccelBMI160()
+        else:
+            accelvalues =  reaAccelerometerLSM303C()
+        
+        x_accel = accelvalues[0]
+        y_accel = accelvalues[1]
+
+        data.append(magvalues)
+
+        x_rect = int((x_accel + 1) * (n / 2))
+        y_rect = int((y_accel + 1) * (n / 2))
+
+        if (x_rect >= n):
+            x_rect = n - 1
+        if (x_rect < 0):
+            x_rect = 0
+
+        if (y_rect >= n):
+            y_rect = n - 1
+        if (y_rect < 0):
+            y_rect = 0
+
+        rect[x_rect][y_rect] = 1
+
+	    #print(x_rect, x_accel, y_rect, y_accel)
+
+        done = True # Asume we are done
+        for x in range(n):
+            for y in range(n):
+                if rect[x][y] == 0:
+                    done = False
+                stroke(rect[x][y])
+                fill(rect[x][y])
+
+                if x_rect == x and y_rect == y:
+                    fill(cursor_color)
+                    stroke(cursor_color)
+                    if cursor_color == 1:
+                        cursor_color = 0
+                    else:
+                        cursor_color = 1
+
+                drawRectangle((x * scale) + rect_offset_x,
+					        (y * scale) + rect_offset_y,
+                            scale, scale)
+        updateScreen()
+
+    result = calibrateCompass(data)
+
+    saveCompassCalibration(result[0], result[1])
+
+    global compassOffset
+    global compassScale
+
+    compassOffset = result[0]
+    compassScale = result[1]
+
+gyro_angles = [0, 0, 0]
+gyro_calibration = [0, 0, 0]
+stop_gyro = False
+gyro_thread = None
+gyro_angles_lock = None
+
+def setGyroZeroAngle():
+    global angles
+    global calibration
+    global gyro_thread
+    global gyro_angles_lock
+
+    if gyro_thread is None:
+        gyro_angles = [0, 0, 0]
+        calibrationsamples = 500
+        samples = 0
+        while samples < calibrationsamples:
+            values = readGyroBMI160()
+
+            gyro_calibration[0] += values[0]
+            gyro_calibration[1] += values[1]
+            gyro_calibration[2] += values[2]
+            samples += 1
+
+        gyro_calibration[0] /= samples
+        gyro_calibration[1] /= samples
+        gyro_calibration[2] /= samples
+
+        gyro_angles_lock = threading.Lock()
+
+        gyro_thread = threading.Thread(target=gyroThread)
+        gyro_thread.start()
+    else:
+        gyro_angles_lock.acquire(True)
+        angles = [0, 0, 0]
+        gyro_angles_lock.release()
+
+
+def computeRotationGyro():
+    global gyro_angles
+
+    return [int(gyro_angles[0]), int(gyro_angles[1]), int(gyro_angles[2])]
+
+def gyroThread():
+    global gyro_angles
+    global gyro_calibration
+    global stop_gyro
+
+    lasttime = readGyroBMI160()[3]
+    start = time.time()
+
+    while True:
+        if stop_gyro:
+            break
+        values = readGyroBMI160()
+
+        dt = (values[3] - lasttime) * 3.9e-5
+        lasttime = values[3]
+
+        gyro_angles_lock.acquire(True)
+        gyro_angles[0] += (values[0] - gyro_calibration[0]) * dt
+        gyro_angles[1] += (values[1] - gyro_calibration[1]) * dt
+        gyro_angles[2] += (values[2] - gyro_calibration[2]) * dt
+        gyro_angles_lock.release()
+     
+# Begin getTemperatureFromCloud
+   
+getTemperatureCloudUrl = "https://cloud.quick-pi.org/cache/weather.php"
+
+def _getTemperatureSupportedTowns():
+    import requests
+    import json
+
+    return json.loads(requests.get(getTemperatureCloudUrl + "?q=supportedtowns").text)
+
+getTemperatureSupportedTowns = _getTemperatureSupportedTowns()
+
+getTemperatureCache = {}
+
+def getTemperatureFromCloud(town):
+    import requests
+    import time
+    current_milli_time = lambda: int(round(time.time() * 1000))
+
+    if not town in getTemperatureSupportedTowns:
+        return "Not supported"
+
+    if town in getTemperatureCache:
+        # lower than 10 minutes
+        if ((current_milli_time() - getTemperatureCache[town]["lastUpdate"]) / 1000) / 60 < 10:
+            return getTemperatureCache[town]["temperature"]
+
+    ret = requests.get(getTemperatureCloudUrl + "?q=" + town).text
+
+    getTemperatureCache[town] = {}
+    getTemperatureCache[town]["lastUpdate"] = current_milli_time()
+    getTemperatureCache[town]["temperature"] = ret
+
+    return ret
+
+# End getTemperatureFromCloud
+
+quickpi_cloudstoreurl = 'http://cloud.quick-pi.org'
+quickpi_cloudstoreid = ""
+quickpi_cloudstorepw = ""
+
+def connectToCloudStore(identifier, password):
+        global quickpi_cloudstoreid
+        global quickpi_cloudstorepw
+
+        quickpi_cloudstoreid = identifier
+        quickpi_cloudstorepw = password
+
+def writeToCloudStore(identifier, key, value):
+        import requests
+        import json
+
+        global quickpi_cloudstoreid
+        global quickpi_cloudstorepw
+
+        data = { "prefix": identifier,
+                "password": quickpi_cloudstorepw,
+                "key": key,
+                "value": json.dumps(value) }
+
+        ret = requests.post(quickpi_cloudstoreurl + '/api/data/write', data = data)
+
+        pass
+
+def readFromCloudStore(identifier, key):
+        import requests
+        import json
+
+        value = 0
+        data = {'prefix': identifier, 'key': key};
+
+        ret = requests.post(quickpi_cloudstoreurl + '/api/data/read', data = data)
+
+        #print (ret.json())
+        if ret.json()["success"]:
+                try:
+                        value = json.loads(ret.json()["value"])
+                except:
+                        value = ret.json()["value"]
+
+        return value
+
+def getNodeID():
+    return nodeId
+
+def getNeighbors():
+    import json
+    import requests
+    global nodeId
+
+    ret = requests.post('http://localhost:5000/api/v1/getNeighbors/{}'.format(nodeId))
+
+    return ret.json()
+    
+
+def getNextMessage():
+    import requests
+    global nodeId
+    while True:
+        ret = requests.post('http://localhost:5000/api/v1/getNextMessage/{}'.format(nodeId))
+        returnData = ret.json()
+        if returnData["hasmessage"]:
+            print(returnData["hasmessage"])
+            return returnData["value"]
+    
+        time.sleep(1)
+
+def sendMessage(toNodeId, message):
+    import requests
+    global nodeId
+    data = {'fromId': nodeId,
+            'message': message }
+
+    ret = requests.post('http://localhost:5000/api/v1/sendMessage/{}'.format(toNodeId), json = data)
+
+def submitAnswer(answer):
+    import requests
+    global nodeId
+    data = { 'answer': answer }
+
+    ret = requests.post('http://localhost:5000/api/v1/submitAnswer/{}'.format(nodeId), json = data)
+
+    print(ret)
+
+last_tick = 0
+in_code = False
+code = []
+fetching_code = False
+IRGPIOTRANS = 22
+IRGPIO = 23
+POST_MS = 15
+POST_US    = POST_MS * 1000
+PRE_MS     = 200
+PRE_US     = PRE_MS  * 1000
+SHORT = 10
+TOLERANCE  = 25
+TOLER_MIN =  (100 - TOLERANCE) / 100.0
+TOLER_MAX =  (100 + TOLERANCE) / 100.0
+GLITCH = 250
+FREQ = 38.0
+GAP_MS     = 100
+GAP_S      = GAP_MS  / 1000.0
+
+
+installed_callback = False
+
+IR_presets = {}
+
+def IR_compare(p1, p2):
+   """
+   Check that both recodings correspond in pulse length to within
+   TOLERANCE%.  If they do average the two recordings pulse lengths.
+
+   Input
+
+        M    S   M   S   M   S   M    S   M    S   M
+   1: 9000 4500 600 560 600 560 600 1700 600 1700 600
+   2: 9020 4570 590 550 590 550 590 1640 590 1640 590
+
+   Output
+
+   A: 9010 4535 595 555 595 555 595 1670 595 1670 595
+   """
+   if len(p1) != len(p2):
+      return False
+
+   for i in range(len(p1)):
+      v = p1[i] / p2[i]
+      if (v < TOLER_MIN) or (v > TOLER_MAX):
+         return False
+
+   for i in range(len(p1)):
+       p1[i] = int(round((p1[i]+p2[i])/2.0))
+
+   return True
+
+def IR_normalise(c):
+   entries = len(c)
+   p = [0]*entries # Set all entries not processed.
+   for i in range(entries):
+      if not p[i]: # Not processed?
+         v = c[i]
+         tot = v
+         similar = 1.0
+
+         # Find all pulses with similar lengths to the start pulse.
+         for j in range(i+2, entries, 2):
+            if not p[j]: # Unprocessed.
+               if (c[j]*TOLER_MIN) < v < (c[j]*TOLER_MAX): # Similar.
+                  tot = tot + c[j]
+                  similar += 1.0
+
+         # Calculate the average pulse length.
+         newv = round(tot / similar, 2)
+         c[i] = newv
+
+         # Set all similar pulses to the average value.
+         for j in range(i+2, entries, 2):
+            if not p[j]: # Unprocessed.
+               if (c[j]*TOLER_MIN) < v < (c[j]*TOLER_MAX): # Similar.
+                  c[j] = newv
+                  p[j] = 1
+
+def IR_end_of_code():
+   global code, fetching_code, SHORT
+   if len(code) > SHORT:
+      IR_normalise(code)
+      fetching_code = False
+   else:
+      code = []
+
+def IR_callback(gpio, level, tick):
+    global last_tick, in_code, code, fetching_code, IRGPIO, POST_MS, POST_US, PRE_US
+
+    if level != pigpio.TIMEOUT:
+        edge = pigpio.tickDiff(last_tick, tick)
+        last_tick = tick
+
+        if fetching_code:
+            if (edge > PRE_US) and (not in_code): # Start of a code.
+                in_code = True
+                pi.set_watchdog(IRGPIO, POST_MS) # Start watchdog.
+
+            elif (edge > POST_US) and in_code: # End of a code.
+                in_code = False
+                pi.set_watchdog(IRGPIO, 0) # Cancel watchdog.
+                IR_end_of_code()
+
+            elif in_code:
+                code.append(edge)
+
+    else:
+        pi.set_watchdog(IRGPIO, 0) # Cancel watchdog.
+        if in_code:
+            in_code = False
+            IR_end_of_code()
+
+def readIRMessageCode(sensorname, timeout):
+    global IRGPIO, fetching_code, code, installed_callback, GLITCH
+
+    if not installed_callback:
+        pi.set_mode(IRGPIO, pigpio.INPUT) # IR RX connected to this GPIO.
+        pi.set_glitch_filter(IRGPIO, GLITCH) # Ignore glitches.
+        cb = pi.callback(IRGPIO, pigpio.EITHER_EDGE, IR_callback)
+
+        installed_callback = True
+
+    fetching_code = True
+
+    start = time.time()
+    while fetching_code:
+        time.sleep(0.1)
+        if time.time() - start > timeout/1000:
+            break
+
+    returncode = code
+    code = []
+    return returncode
+
+def readIRMessage(remotecode, timeout):
+    start = time.time()
+
+    while time.time() - start < timeout / 1000:
+        code = readIRMessageCode(remotecode, timeout)
+
+        for presetname, presetcode in IR_presets.items():
+            if IR_compare(presetcode, code):
+                return presetname
+
+    return ""
+
+def IR_carrier(gpio, frequency, micros):
+    """
+    Generate carrier square wave.
+    """
+    wf = []
+    cycle = 1000.0 / frequency
+    cycles = int(round(micros/cycle))
+    on = int(round(cycle / 2.0))
+    sofar = 0
+    for c in range(cycles):
+       target = int(round((c+1)*cycle))
+       sofar += on
+       off = target - sofar
+       sofar += off
+       wf.append(pigpio.pulse(1<<gpio, 0, on))
+       wf.append(pigpio.pulse(0, 1<<gpio, off))
+    return wf
+ 
+def sendIRMessage(sensorname, name):
+    global IRGPIOTRANS, FREQ
+
+    try:
+        time.sleep(0.20) ## FIXME I need this otherwise this won't work if I read the distance sensor first ...
+        pi.set_mode(IRGPIOTRANS, pigpio.OUTPUT)
+        pi.wave_add_new()
+
+        emit_time = time.time()
+
+        code = IR_presets[name]
+
+        marks_wid = {}
+        spaces_wid = {}
+
+        wave = [0]*len(code)
+
+        for i in range(0, len(code)):
+            ci = int(code[i])
+            if i & 1: # Space
+                if ci not in spaces_wid:
+                    pi.wave_add_generic([pigpio.pulse(0, 0, ci)])
+                    spaces_wid[ci] = pi.wave_create()
+                wave[i] = spaces_wid[ci]
+            else: # Mark
+                if ci not in marks_wid:
+                    wf = IR_carrier(IRGPIOTRANS, FREQ, ci)
+                    pi.wave_add_generic(wf)
+                    marks_wid[ci] = pi.wave_create()
+                wave[i] = marks_wid[ci]
+
+        delay = emit_time - time.time()
+
+        if delay > 0.0:
+            time.sleep(delay)
+        
+        pi.wave_chain(wave)
+
+        while pi.wave_tx_busy():
+            time.sleep(0.002)
+
+        emit_time = time.time() + GAP_S
+
+        for i in marks_wid:
+            pi.wave_delete(marks_wid[i])
+
+        marks_wid = {}
+
+        for i in spaces_wid:
+            pi.wave_delete(spaces_wid[i])
+
+        spaces_wid = {}
+    except Exception  as e:
+        pass
+        print("------------------------------------------>", e)
+        
+def presetIRMessage(name, data):
+    import json
+    global IR_presets
+
+    IR_presets[name] = json.loads(data)
+
+# SPDX-FileCopyrightText: 2017 Tony DiCola for Adafruit Industries
+#
+# SPDX-License-Identifier: MIT
+
+import math
+
+
+# Configuration constants:
+_SYSRANGE_START = 0x00
+_SYSTEM_THRESH_HIGH = 0x0C
+_SYSTEM_THRESH_LOW = 0x0E
+_SYSTEM_SEQUENCE_CONFIG = 0x01
+_SYSTEM_RANGE_CONFIG = 0x09
+_SYSTEM_INTERMEASUREMENT_PERIOD = 0x04
+_SYSTEM_INTERRUPT_CONFIG_GPIO = 0x0A
+_GPIO_HV_MUX_ACTIVE_HIGH = 0x84
+_SYSTEM_INTERRUPT_CLEAR = 0x0B
+_RESULT_INTERRUPT_STATUS = 0x13
+_RESULT_RANGE_STATUS = 0x14
+_RESULT_CORE_AMBIENT_WINDOW_EVENTS_RTN = 0xBC
+_RESULT_CORE_RANGING_TOTAL_EVENTS_RTN = 0xC0
+_RESULT_CORE_AMBIENT_WINDOW_EVENTS_REF = 0xD0
+_RESULT_CORE_RANGING_TOTAL_EVENTS_REF = 0xD4
+_RESULT_PEAK_SIGNAL_RATE_REF = 0xB6
+_ALGO_PART_TO_PART_RANGE_OFFSET_MM = 0x28
+_I2C_SLAVE_DEVICE_ADDRESS = 0x8A
+_MSRC_CONFIG_CONTROL = 0x60
+_PRE_RANGE_CONFIG_MIN_SNR = 0x27
+_PRE_RANGE_CONFIG_VALID_PHASE_LOW = 0x56
+_PRE_RANGE_CONFIG_VALID_PHASE_HIGH = 0x57
+_PRE_RANGE_MIN_COUNT_RATE_RTN_LIMIT = 0x64
+_FINAL_RANGE_CONFIG_MIN_SNR = 0x67
+_FINAL_RANGE_CONFIG_VALID_PHASE_LOW = 0x47
+_FINAL_RANGE_CONFIG_VALID_PHASE_HIGH = 0x48
+_FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT = 0x44
+_PRE_RANGE_CONFIG_SIGMA_THRESH_HI = 0x61
+_PRE_RANGE_CONFIG_SIGMA_THRESH_LO = 0x62
+_PRE_RANGE_CONFIG_VCSEL_PERIOD = 0x50
+_PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI = 0x51
+_PRE_RANGE_CONFIG_TIMEOUT_MACROP_LO = 0x52
+_SYSTEM_HISTOGRAM_BIN = 0x81
+_HISTOGRAM_CONFIG_INITIAL_PHASE_SELECT = 0x33
+_HISTOGRAM_CONFIG_READOUT_CTRL = 0x55
+_FINAL_RANGE_CONFIG_VCSEL_PERIOD = 0x70
+_FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI = 0x71
+_FINAL_RANGE_CONFIG_TIMEOUT_MACROP_LO = 0x72
+_CROSSTALK_COMPENSATION_PEAK_RATE_MCPS = 0x20
+_MSRC_CONFIG_TIMEOUT_MACROP = 0x46
+_SOFT_RESET_GO2_SOFT_RESET_N = 0xBF
+_IDENTIFICATION_MODEL_ID = 0xC0
+_IDENTIFICATION_REVISION_ID = 0xC2
+_OSC_CALIBRATE_VAL = 0xF8
+_GLOBAL_CONFIG_VCSEL_WIDTH = 0x32
+_GLOBAL_CONFIG_SPAD_ENABLES_REF_0 = 0xB0
+_GLOBAL_CONFIG_SPAD_ENABLES_REF_1 = 0xB1
+_GLOBAL_CONFIG_SPAD_ENABLES_REF_2 = 0xB2
+_GLOBAL_CONFIG_SPAD_ENABLES_REF_3 = 0xB3
+_GLOBAL_CONFIG_SPAD_ENABLES_REF_4 = 0xB4
+_GLOBAL_CONFIG_SPAD_ENABLES_REF_5 = 0xB5
+_GLOBAL_CONFIG_REF_EN_START_SELECT = 0xB6
+_DYNAMIC_SPAD_NUM_REQUESTED_REF_SPAD = 0x4E
+_DYNAMIC_SPAD_REF_EN_START_OFFSET = 0x4F
+_POWER_MANAGEMENT_GO1_POWER_FORCE = 0x80
+_VHV_CONFIG_PAD_SCL_SDA__EXTSUP_HV = 0x89
+_ALGO_PHASECAL_LIM = 0x30
+_ALGO_PHASECAL_CONFIG_TIMEOUT = 0x30
+_VCSEL_PERIOD_PRE_RANGE = 0
+_VCSEL_PERIOD_FINAL_RANGE = 1
+
+import smbus2
+
+bus = smbus2.SMBus(1)
+
+
+def _decode_timeout(val):
+    # format: "(LSByte * 2^MSByte) + 1"
+    return float(val & 0xFF) * math.pow(2.0, ((val & 0xFF00) >> 8)) + 1
+
+
+def _encode_timeout(timeout_mclks):
+    # format: "(LSByte * 2^MSByte) + 1"
+    timeout_mclks = int(timeout_mclks) & 0xFFFF
+    ls_byte = 0
+    ms_byte = 0
+    if timeout_mclks > 0:
+        ls_byte = timeout_mclks - 1
+        while ls_byte > 255:
+            ls_byte >>= 1
+            ms_byte += 1
+        return ((ms_byte << 8) | (ls_byte & 0xFF)) & 0xFFFF
+    return 0
+
+
+def _timeout_mclks_to_microseconds(timeout_period_mclks, vcsel_period_pclks):
+    macro_period_ns = ((2304 * (vcsel_period_pclks) * 1655) + 500) // 1000
+    return ((timeout_period_mclks * macro_period_ns) + (macro_period_ns // 2)) // 1000
+
+
+def _timeout_microseconds_to_mclks(timeout_period_us, vcsel_period_pclks):
+    macro_period_ns = ((2304 * (vcsel_period_pclks) * 1655) + 500) // 1000
+    return ((timeout_period_us * 1000) + (macro_period_ns // 2)) // macro_period_ns
+
+
+class VL53L0X:
+    """Driver for the VL53L0X distance sensor."""
+
+    # Class-level buffer for reading and writing data with the sensor.
+    # This reduces memory allocations but means the code is not re-entrant or
+    # thread safe!
+    _BUFFER = bytearray(3)
+
+    def __init__(self, address=41, io_timeout_s=0):
+        # pylint: disable=too-many-statements
+        self.io_timeout_s = io_timeout_s
+        self._i2c_address = address
+
+
+        # Check identification registers for expected values.
+        # From section 3.2 of the datasheet.
+        if (
+            self._read_u8(0xC0) != 0xEE
+            or self._read_u8(0xC1) != 0xAA
+            or self._read_u8(0xC2) != 0x10
+        ):
+            raise RuntimeError(
+                "Failed to find expected ID register values. Check wiring!"
+            )
+        # Initialize access to the sensor.  This is based on the logic from:
+        #   https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
+        # Set I2C standard mode.
+        for pair in ((0x88, 0x00), (0x80, 0x01), (0xFF, 0x01), (0x00, 0x00)):
+            self._write_u8(pair[0], pair[1])
+        self._stop_variable = self._read_u8(0x91)
+        for pair in ((0x00, 0x01), (0xFF, 0x00), (0x80, 0x00)):
+            self._write_u8(pair[0], pair[1])
+        # disable SIGNAL_RATE_MSRC (bit 1) and SIGNAL_RATE_PRE_RANGE (bit 4)
+        # limit checks
+        config_control = self._read_u8(_MSRC_CONFIG_CONTROL) | 0x12
+        self._write_u8(_MSRC_CONFIG_CONTROL, config_control)
+        # set final range signal rate limit to 0.25 MCPS (million counts per
+        # second)
+        self.signal_rate_limit = 0.25
+        self._write_u8(_SYSTEM_SEQUENCE_CONFIG, 0xFF)
+        spad_count, spad_is_aperture = self._get_spad_info()
+        # The SPAD map (RefGoodSpadMap) is read by
+        # VL53L0X_get_info_from_device() in the API, but the same data seems to
+        # be more easily readable from GLOBAL_CONFIG_SPAD_ENABLES_REF_0 through
+        # _6, so read it from there.
+        ref_spad_map = bytearray(7)
+        ref_spad_map[0] = _GLOBAL_CONFIG_SPAD_ENABLES_REF_0
+
+#        self._device.write(ref_spad_map, end=1)
+#        self._device.readinto(ref_spad_map, start=1)
+
+        result = bus.read_i2c_block_data(address, ref_spad_map[0], len(ref_spad_map) - 1)
+
+        for i in range(len(result)):
+            ref_spad_map[i + 1] = result[i]
+
+        for pair in (
+            (0xFF, 0x01),
+            (_DYNAMIC_SPAD_REF_EN_START_OFFSET, 0x00),
+            (_DYNAMIC_SPAD_NUM_REQUESTED_REF_SPAD, 0x2C),
+            (0xFF, 0x00),
+            (_GLOBAL_CONFIG_REF_EN_START_SELECT, 0xB4),
+        ):
+            self._write_u8(pair[0], pair[1])
+
+        first_spad_to_enable = 12 if spad_is_aperture else 0
+        spads_enabled = 0
+        for i in range(48):
+            if i < first_spad_to_enable or spads_enabled == spad_count:
+                # This bit is lower than the first one that should be enabled,
+                # or (reference_spad_count) bits have already been enabled, so
+                # zero this bit.
+                ref_spad_map[1 + (i // 8)] &= ~(1 << (i % 8))
+            elif (ref_spad_map[1 + (i // 8)] >> (i % 8)) & 0x1 > 0:
+                spads_enabled += 1
+#       self._device.write(ref_spad_map)
+        bus.write_i2c_block_data(address, ref_spad_map[0], ref_spad_map[1:])
+        for pair in (
+            (0xFF, 0x01),
+            (0x00, 0x00),
+            (0xFF, 0x00),
+            (0x09, 0x00),
+            (0x10, 0x00),
+            (0x11, 0x00),
+            (0x24, 0x01),
+            (0x25, 0xFF),
+            (0x75, 0x00),
+            (0xFF, 0x01),
+            (0x4E, 0x2C),
+            (0x48, 0x00),
+            (0x30, 0x20),
+            (0xFF, 0x00),
+            (0x30, 0x09),
+            (0x54, 0x00),
+            (0x31, 0x04),
+            (0x32, 0x03),
+            (0x40, 0x83),
+            (0x46, 0x25),
+            (0x60, 0x00),
+            (0x27, 0x00),
+            (0x50, 0x06),
+            (0x51, 0x00),
+            (0x52, 0x96),
+            (0x56, 0x08),
+            (0x57, 0x30),
+            (0x61, 0x00),
+            (0x62, 0x00),
+            (0x64, 0x00),
+            (0x65, 0x00),
+            (0x66, 0xA0),
+            (0xFF, 0x01),
+            (0x22, 0x32),
+            (0x47, 0x14),
+            (0x49, 0xFF),
+            (0x4A, 0x00),
+            (0xFF, 0x00),
+            (0x7A, 0x0A),
+            (0x7B, 0x00),
+            (0x78, 0x21),
+            (0xFF, 0x01),
+            (0x23, 0x34),
+            (0x42, 0x00),
+            (0x44, 0xFF),
+            (0x45, 0x26),
+            (0x46, 0x05),
+            (0x40, 0x40),
+            (0x0E, 0x06),
+            (0x20, 0x1A),
+            (0x43, 0x40),
+            (0xFF, 0x00),
+            (0x34, 0x03),
+            (0x35, 0x44),
+            (0xFF, 0x01),
+            (0x31, 0x04),
+            (0x4B, 0x09),
+            (0x4C, 0x05),
+            (0x4D, 0x04),
+            (0xFF, 0x00),
+            (0x44, 0x00),
+            (0x45, 0x20),
+            (0x47, 0x08),
+            (0x48, 0x28),
+            (0x67, 0x00),
+            (0x70, 0x04),
+            (0x71, 0x01),
+            (0x72, 0xFE),
+            (0x76, 0x00),
+            (0x77, 0x00),
+            (0xFF, 0x01),
+            (0x0D, 0x01),
+            (0xFF, 0x00),
+            (0x80, 0x01),
+            (0x01, 0xF8),
+            (0xFF, 0x01),
+            (0x8E, 0x01),
+            (0x00, 0x01),
+            (0xFF, 0x00),
+            (0x80, 0x00),
+        ):
+            self._write_u8(pair[0], pair[1])
+
+        self._write_u8(_SYSTEM_INTERRUPT_CONFIG_GPIO, 0x04)
+        gpio_hv_mux_active_high = self._read_u8(_GPIO_HV_MUX_ACTIVE_HIGH)
+        self._write_u8(
+            _GPIO_HV_MUX_ACTIVE_HIGH, gpio_hv_mux_active_high & ~0x10
+        )  # active low
+        self._write_u8(_SYSTEM_INTERRUPT_CLEAR, 0x01)
+        self._measurement_timing_budget_us = self.measurement_timing_budget
+        self._write_u8(_SYSTEM_SEQUENCE_CONFIG, 0xE8)
+        self.measurement_timing_budget = self._measurement_timing_budget_us
+        self._write_u8(_SYSTEM_SEQUENCE_CONFIG, 0x01)
+
+        self._perform_single_ref_calibration(0x40)
+        self._write_u8(_SYSTEM_SEQUENCE_CONFIG, 0x02)
+        self._perform_single_ref_calibration(0x00)
+        # "restore the previous Sequence Config"
+        self._write_u8(_SYSTEM_SEQUENCE_CONFIG, 0xE8)
+
+    def _read_u8(self, address):
+        # Read an 8-bit unsigned value from the specified 8-bit address.
+#        self._BUFFER[0] = address & 0xFF
+#        self._device.write(self._BUFFER, end=1)
+#        self._device.readinto(self._BUFFER, end=1)
+        result = bus.read_i2c_block_data(self._i2c_address, address & 0xFF, 1)
+
+        return result[0]
+
+
+    def _read_u16(self, address):
+        # Read a 16-bit BE unsigned value from the specified 8-bit address.
+#        with self._device:
+#            self._BUFFER[0] = address & 0xFF
+#            self._device.write(self._BUFFER, end=1)
+#            self._device.readinto(self._BUFFER)
+
+#        msg = smbus2.i2c_msg.read(_i2c_address, 2)
+#        result = bus.i2c_rdwr(msg)
+       result = bus.read_i2c_block_data(self._i2c_address, address & 0xFF, 2)
+
+
+       return (result[0] << 8) | result[1]
+
+    def _write_u8(self, address, val):
+        # Write an 8-bit unsigned value to the specified 8-bit address.
+#        with self._device:
+#            self._BUFFER[0] = address & 0xFF
+#        self._BUFFER[1] = val & 0xFF
+#        self._device.write(self._BUFFER, end=2)
+        bus.write_byte_data(self._i2c_address, address & 0xFF, val & 0xFF)
+
+    def _write_u16(self, address, val):
+        # Write a 16-bit BE unsigned value to the specified 8-bit address.
+#        with self._device:
+#            self._BUFFER[0] = address & 0xFF
+#            self._BUFFER[1] = (val >> 8) & 0xFF
+#            self._BUFFER[2] = val & 0xFF
+#            self._device.write(self._BUFFER)
+        self._BUFFER[1] = (val >> 8) & 0xFF
+        self._BUFFER[2] = val & 0xFF
+
+        bus.write_i2c_block_data(self._i2c_address, address & 0xFF, self._BUFFER[1:3])
+
+
+    def _get_spad_info(self):
+        # Get reference SPAD count and type, returned as a 2-tuple of
+        # count and boolean is_aperture.  Based on code from:
+        #   https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
+        for pair in ((0x80, 0x01), (0xFF, 0x01), (0x00, 0x00), (0xFF, 0x06)):
+            self._write_u8(pair[0], pair[1])
+        self._write_u8(0x83, self._read_u8(0x83) | 0x04)
+        for pair in (
+            (0xFF, 0x07),
+            (0x81, 0x01),
+            (0x80, 0x01),
+            (0x94, 0x6B),
+            (0x83, 0x00),
+        ):
+            self._write_u8(pair[0], pair[1])
+        start = time.monotonic()
+        while self._read_u8(0x83) == 0x00:
+            if (
+                self.io_timeout_s > 0
+                and (time.monotonic() - start) >= self.io_timeout_s
+            ):
+                raise RuntimeError("Timeout waiting for VL53L0X!")
+        self._write_u8(0x83, 0x01)
+        tmp = self._read_u8(0x92)
+        count = tmp & 0x7F
+        is_aperture = ((tmp >> 7) & 0x01) == 1
+        for pair in ((0x81, 0x00), (0xFF, 0x06)):
+            self._write_u8(pair[0], pair[1])
+        self._write_u8(0x83, self._read_u8(0x83) & ~0x04)
+        for pair in ((0xFF, 0x01), (0x00, 0x01), (0xFF, 0x00), (0x80, 0x00)):
+            self._write_u8(pair[0], pair[1])
+        return (count, is_aperture)
+
+    def _perform_single_ref_calibration(self, vhv_init_byte):
+        # based on VL53L0X_perform_single_ref_calibration() from ST API.
+        self._write_u8(_SYSRANGE_START, 0x01 | vhv_init_byte & 0xFF)
+        start = time.monotonic()
+        while (self._read_u8(_RESULT_INTERRUPT_STATUS) & 0x07) == 0:
+            if (
+                self.io_timeout_s > 0
+                and (time.monotonic() - start) >= self.io_timeout_s
+            ):
+                raise RuntimeError("Timeout waiting for VL53L0X!")
+        self._write_u8(_SYSTEM_INTERRUPT_CLEAR, 0x01)
+        self._write_u8(_SYSRANGE_START, 0x00)
+
+    def _get_vcsel_pulse_period(self, vcsel_period_type):
+        # pylint: disable=no-else-return
+        # Disable should be removed when refactor can be tested
+        if vcsel_period_type == _VCSEL_PERIOD_PRE_RANGE:
+            val = self._read_u8(_PRE_RANGE_CONFIG_VCSEL_PERIOD)
+            return (((val) + 1) & 0xFF) << 1
+        elif vcsel_period_type == _VCSEL_PERIOD_FINAL_RANGE:
+            val = self._read_u8(_FINAL_RANGE_CONFIG_VCSEL_PERIOD)
+            return (((val) + 1) & 0xFF) << 1
+        return 255
+
+    def _get_sequence_step_enables(self):
+        # based on VL53L0X_GetSequenceStepEnables() from ST API
+        sequence_config = self._read_u8(_SYSTEM_SEQUENCE_CONFIG)
+        tcc = (sequence_config >> 4) & 0x1 > 0
+        dss = (sequence_config >> 3) & 0x1 > 0
+        msrc = (sequence_config >> 2) & 0x1 > 0
+        pre_range = (sequence_config >> 6) & 0x1 > 0
+        final_range = (sequence_config >> 7) & 0x1 > 0
+        return (tcc, dss, msrc, pre_range, final_range)
+
+    def _get_sequence_step_timeouts(self, pre_range):
+        # based on get_sequence_step_timeout() from ST API but modified by
+        # pololu here:
+        #   https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
+        pre_range_vcsel_period_pclks = self._get_vcsel_pulse_period(
+            _VCSEL_PERIOD_PRE_RANGE
+        )
+        msrc_dss_tcc_mclks = (self._read_u8(_MSRC_CONFIG_TIMEOUT_MACROP) + 1) & 0xFF
+        msrc_dss_tcc_us = _timeout_mclks_to_microseconds(
+            msrc_dss_tcc_mclks, pre_range_vcsel_period_pclks
+        )
+        pre_range_mclks = _decode_timeout(
+            self._read_u16(_PRE_RANGE_CONFIG_TIMEOUT_MACROP_HI)
+        )
+        pre_range_us = _timeout_mclks_to_microseconds(
+            pre_range_mclks, pre_range_vcsel_period_pclks
+        )
+        final_range_vcsel_period_pclks = self._get_vcsel_pulse_period(
+            _VCSEL_PERIOD_FINAL_RANGE
+        )
+        final_range_mclks = _decode_timeout(
+            self._read_u16(_FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI)
+        )
+        if pre_range:
+            final_range_mclks -= pre_range_mclks
+        final_range_us = _timeout_mclks_to_microseconds(
+            final_range_mclks, final_range_vcsel_period_pclks
+        )
+        return (
+            msrc_dss_tcc_us,
+            pre_range_us,
+            final_range_us,
+            final_range_vcsel_period_pclks,
+            pre_range_mclks,
+        )
+
+    @property
+    def signal_rate_limit(self):
+        """The signal rate limit in mega counts per second."""
+        val = self._read_u16(_FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT)
+        # Return value converted from 16-bit 9.7 fixed point to float.
+        return val / (1 << 7)
+
+    @signal_rate_limit.setter
+    def signal_rate_limit(self, val):
+        assert 0.0 <= val <= 511.99
+        # Convert to 16-bit 9.7 fixed point value from a float.
+        val = int(val * (1 << 7))
+        self._write_u16(_FINAL_RANGE_CONFIG_MIN_COUNT_RATE_RTN_LIMIT, val)
+
+    @property
+    def measurement_timing_budget(self):
+        """The measurement timing budget in microseconds."""
+        budget_us = 1910 + 960  # Start overhead + end overhead.
+        tcc, dss, msrc, pre_range, final_range = self._get_sequence_step_enables()
+        step_timeouts = self._get_sequence_step_timeouts(pre_range)
+        msrc_dss_tcc_us, pre_range_us, final_range_us, _, _ = step_timeouts
+        if tcc:
+            budget_us += msrc_dss_tcc_us + 590
+        if dss:
+            budget_us += 2 * (msrc_dss_tcc_us + 690)
+        elif msrc:
+            budget_us += msrc_dss_tcc_us + 660
+        if pre_range:
+            budget_us += pre_range_us + 660
+        if final_range:
+            budget_us += final_range_us + 550
+        self._measurement_timing_budget_us = budget_us
+        return budget_us
+
+    @measurement_timing_budget.setter
+    def measurement_timing_budget(self, budget_us):
+        # pylint: disable=too-many-locals
+        assert budget_us >= 20000
+        used_budget_us = 1320 + 960  # Start (diff from get) + end overhead
+        tcc, dss, msrc, pre_range, final_range = self._get_sequence_step_enables()
+        step_timeouts = self._get_sequence_step_timeouts(pre_range)
+        msrc_dss_tcc_us, pre_range_us, _ = step_timeouts[:3]
+        final_range_vcsel_period_pclks, pre_range_mclks = step_timeouts[3:]
+        if tcc:
+            used_budget_us += msrc_dss_tcc_us + 590
+        if dss:
+            used_budget_us += 2 * (msrc_dss_tcc_us + 690)
+        elif msrc:
+            used_budget_us += msrc_dss_tcc_us + 660
+        if pre_range:
+            used_budget_us += pre_range_us + 660
+        if final_range:
+            used_budget_us += 550
+            # "Note that the final range timeout is determined by the timing
+            # budget and the sum of all other timeouts within the sequence.
+            # If there is no room for the final range timeout, then an error
+            # will be set. Otherwise the remaining time will be applied to
+            # the final range."
+            if used_budget_us > budget_us:
+                raise ValueError("Requested timeout too big.")
+            final_range_timeout_us = budget_us - used_budget_us
+            final_range_timeout_mclks = _timeout_microseconds_to_mclks(
+                final_range_timeout_us, final_range_vcsel_period_pclks
+            )
+            if pre_range:
+                final_range_timeout_mclks += pre_range_mclks
+            self._write_u16(
+                _FINAL_RANGE_CONFIG_TIMEOUT_MACROP_HI,
+                _encode_timeout(final_range_timeout_mclks),
+            )
+            self._measurement_timing_budget_us = budget_us
+
+    @property
+    def range(self):
+        """Perform a single reading of the range for an object in front of
+        the sensor and return the distance in millimeters.
+        """
+        # Adapted from readRangeSingleMillimeters &
+        # readRangeContinuousMillimeters in pololu code at:
+        #   https://github.com/pololu/vl53l0x-arduino/blob/master/VL53L0X.cpp
+        for pair in (
+            (0x80, 0x01),
+            (0xFF, 0x01),
+            (0x00, 0x00),
+            (0x91, self._stop_variable),
+            (0x00, 0x01),
+            (0xFF, 0x00),
+            (0x80, 0x00),
+            (_SYSRANGE_START, 0x01),
+        ):
+            self._write_u8(pair[0], pair[1])
+        start = time.monotonic()
+        while (self._read_u8(_SYSRANGE_START) & 0x01) > 0:
+            if (
+                self.io_timeout_s > 0
+                and (time.monotonic() - start) >= self.io_timeout_s
+            ):
+                raise RuntimeError("Timeout waiting for VL53L0X!")
+        start = time.monotonic()
+        while (self._read_u8(_RESULT_INTERRUPT_STATUS) & 0x07) == 0:
+            if (
+                self.io_timeout_s > 0
+                and (time.monotonic() - start) >= self.io_timeout_s
+            ):
+                raise RuntimeError("Timeout waiting for VL53L0X!")
+        # assumptions: Linearity Corrective Gain is 1000 (default)
+        # fractional ranging is not enabled
+        range_mm = self._read_u16(_RESULT_RANGE_STATUS + 10)
+        self._write_u8(_SYSTEM_INTERRUPT_CLEAR, 0x01)
+        return range_mm
+
