@@ -61,6 +61,8 @@ SHOWMACADDRESS = 11
 
 STARTBTMODE = 12
 
+RESETCOMPASSCALIBRATION = 13
+
 main_menu = [ 
 ##	      { "menu" :  "Auto Test", "submenu" : 
 #			[ {"menu" : "Run", "id" :  RUNAUTOTEST } ]},
@@ -74,7 +76,10 @@ main_menu = [
 			  {"menu" : "Show school and name", "id" : SHOWSCHOOL },
 			  {"menu" : "Show IP Address", "id" : SHOWIPADDRESS }, 
 			  {"menu" : "Show Mac Address", "id" : SHOWMACADDRESS } ]},
- 
+
+              { "menu" :  "Reset compass", "submenu":
+                        [ { "menu" : "Press to reset", "id" :  RESETCOMPASSCALIBRATION } ] },
+
               { "menu" :  "Check for updates", "id" :  RUNAUTOUPDATE },
               { "menu" :  "Board test", "submenu": 
 			[ { "menu" : "Press to run", "id" :  RUNBOARDTEST } ] },
@@ -440,6 +445,14 @@ while True:
 					time.sleep(0.2)
 
 
+			elif menuoption == RESETCOMPASSCALIBRATION:
+				try:
+					os.unlink("/mnt/data/compasscalibration.txt")
+				except:
+					pass
+
+				drawMenu("Compass reset", "completed", False)
+				waitForButton([UP_PIN, DOWN_PIN, LEFT_PIN, BUTTON2_PIN])
 
 			elif menuoption == RUNBOARDTEST:
 				os.system("python3 /home/pi/quickpi/testsuite/fulltest.py")
